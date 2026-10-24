@@ -18,6 +18,25 @@ const FILE_NAME = 'pocketzen-data.json'
 let token = null
 let expiresAt = 0
 
+// Google access tokens last about an hour. Keeping a still-valid one on this device means a reload or a reopened
+// app reuses it instead of opening Google's sign-in window again. It is cleared on logout.
+const TOKEN_KEY = 'pz:tok'
+try {
+  const saved = JSON.parse(localStorage.getItem(TOKEN_KEY))
+  if (saved?.t && saved.exp > Date.now() + 60000) {
+    token = saved.t
+    expiresAt = saved.exp
+  }
+} catch { /* nothing saved */ }
+const saveToken = () => {
+  try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ t: token, exp: expiresAt })) } catch { /* storage blocked */ }
+}
+const forgetToken = () => {
+  token = null
+  expiresAt = 0
+  try { localStorage.removeItem(TOKEN_KEY) } catch { /* ignore */ }
+}
+
 export const hasClientId = () => !!CLIENT_ID && !CLIENT_ID.startsWith('your-')
 
 function waitForGis(timeout = 10000) {
@@ -46,6 +65,7 @@ export async function requestToken({ prompt = '', hint, scope } = {}) {
         if (resp.error) return reject(new Error(resp.error_description || resp.error))
         token = resp.access_token
         expiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000
+        saveToken()
         resolve(token)
       },
       error_callback: (err) => reject(new Error(err?.type || 'auth_failed')),
@@ -54,7 +74,8 @@ export async function requestToken({ prompt = '', hint, scope } = {}) {
   })
 }
 
-const hasLiveToken = () => !!token && Date.now() < expiresAt - 60000
+/** True while we hold a valid token, so background work can run without opening a sign-in window. */
+export const hasLiveToken = () => !!token && Date.now() < expiresAt - 60000
 
 async function ensureToken(hint) {
   if (hasLiveToken()) return token
@@ -63,8 +84,7 @@ async function ensureToken(hint) {
 
 export function signOutGoogle() {
   const t = token
-  token = null
-  expiresAt = 0
+  forgetToken()
   if (t && window.google?.accounts?.oauth2) {
     try { window.google.accounts.oauth2.revoke(t, () => {}) } catch { /* ignore */ }
   }
@@ -74,7 +94,7 @@ async function api(url, opts = {}, hint) {
   const t = await ensureToken(hint)
   let res = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${t}` } })
   if (res.status === 401) {
-    token = null
+    forgetToken()
     const t2 = await ensureToken(hint)
     res = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${t2}` } })
   }

@@ -184,15 +184,18 @@ export function AppProvider({ children }) {
         hiddenAt = 0
         const s = sessionRef.current
         if (s && s.mode !== 'local') {
-          if (localStorage.getItem(dirtyKey(s.sub))) schedulePush(300)
-          else if (Date.now() - lastPull > PULL_EVERY_MS) {
-            lastPull = Date.now()
-            pull()
+          // timers and focus changes only sync with a valid token; they never pop up a Google window on their own
+          if (google.hasLiveToken()) {
+            if (localStorage.getItem(dirtyKey(s.sub))) schedulePush(300)
+            else if (Date.now() - lastPull > PULL_EVERY_MS) {
+              lastPull = Date.now()
+              pull()
+            }
           }
         }
       }
     }
-    const onOnline = () => sessionRef.current && sessionRef.current.mode !== 'local' && pull()
+    const onOnline = () => sessionRef.current && sessionRef.current.mode !== 'local' && google.hasLiveToken() && pull()
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('online', onOnline)
     return () => {

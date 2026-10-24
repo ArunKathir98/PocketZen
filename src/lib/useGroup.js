@@ -73,7 +73,8 @@ export function useGroup(id, role = 'viewer', hint) {
       setOutbox(outboxRef.current)
       sync()
     })()
-    const tick = () => document.visibilityState === 'visible' && sync()
+    // background refreshes need a valid token (viewers need none); opening the group or tapping the status syncs anyway
+    const tick = () => document.visibilityState === 'visible' && (!admin || google.hasLiveToken()) && sync()
     const timer = setInterval(tick, admin ? ADMIN_POLL_MS : VIEWER_POLL_MS)
     document.addEventListener('visibilitychange', tick)
     window.addEventListener('online', tick)

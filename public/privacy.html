@@ -26,6 +26,7 @@
     <li><b>Google Drive app data folder</b> (<code>drive.appdata</code> permission) — the app creates and reads a single file, <code>pocketzen-data.json</code>, in a hidden folder that only PocketZen can access. It cannot see or change any of your other Drive files.</li>
     <li><b>Files PocketZen creates for shared groups</b> (<code>drive.file</code> permission) — requested only if you create a group. The app can then create, update and delete <i>only the group files it created</i>. It cannot see your other files.</li>
     <li><b>Financial records you enter</b> — accounts, categories, transactions, budgets, EMIs, loans, reminders, group membership and settings. They are saved in the app data file and cached on your device so the app works offline.</li>
+    <li><b>Sign-in session</b> — your Google name and email, plus a short-lived (about one hour) Google access token, are kept on your device so you stay signed in. They are removed when you log out.</li>
     <li><b>App PIN</b> (optional) — stored only as a salted, hashed value; the PIN itself is never stored or sent anywhere.</li>
   </ul>
 

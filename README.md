@@ -120,8 +120,9 @@ scripts          icon generator, poster generator
 ## Notes & limits
 
 - **Stay signed in:** the session never expires; only *Log out* ends it. Google access tokens last about an hour, so the
-  app quietly renews one on launch. If the browser blocks that, a *Reconnect* banner appears and changes keep saving on the
-  device. Several devices merge their changes instead of overwriting each other (a deletion made on one device can come back
+  app quietly renews one only when it has expired. A still-valid token is kept on the device (cleared on logout), so
+  reloads and reopening the app don't open Google's sign-in window again. Timers and focus changes never open it on
+  their own. If the browser blocks a renewal, a *Reconnect* banner appears and changes keep saving on the device. Several devices merge their changes instead of overwriting each other (a deletion made on one device can come back
   if another device edits the same data first).
 - **Reminders** alert while the app is open or running in the background as an installed PWA. A website can't schedule
   alerts for a closed or locked phone, and can't choose its own notification sound (the phone's setting applies).

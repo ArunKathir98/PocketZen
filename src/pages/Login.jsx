@@ -1,0 +1,50 @@
+import { CalendarClock, CloudCog, PiggyBank, ShieldCheck } from 'lucide-react'
+import { useApp } from '../lib/store'
+import { hasClientId } from '../lib/google'
+import { GoogleG, Logo } from '../components/ui'
+
+const FEATURES = [
+  [PiggyBank, 'Track income, expenses & transfers'],
+  [CloudCog, 'Budgets by category, accounts & bills'],
+  [CalendarClock, 'Recurring bill reminders'],
+  [ShieldCheck, 'Stored in your own Google Drive — never on our servers'],
+]
+
+export default function Login() {
+  const { login, loggingIn, error } = useApp()
+  return (
+    <div className="auth">
+      <div className="auth-card wide">
+        <div>
+          <Logo />
+          <h1>Pocket<span className="grad-text">Zen</span></h1>
+          <p className="tag">Your Money. Your Control.</p>
+          <p className="desc">
+            A personal finance companion to track income, manage expenses, organize accounts, set budgets, and stay on
+            top of bills — with your financial records stored in your own Google Drive.
+          </p>
+        </div>
+        <div className="card pad" style={{ padding: 24 }}>
+          <ul className="feat">
+            {FEATURES.map(([Icon, text]) => (
+              <li key={text}>
+                <span className="fi"><Icon size={19} /></span>
+                {text}
+              </li>
+            ))}
+          </ul>
+          <button className="g-btn" onClick={login} disabled={loggingIn || !hasClientId()}>
+            <GoogleG /> {loggingIn ? 'Signing in…' : 'Continue with Google'}
+          </button>
+          {!hasClientId() && (
+            <p className="err">Setup needed: add VITE_GOOGLE_CLIENT_ID to your .env file (see README).</p>
+          )}
+          {error && <p className="err" role="alert">{error}</p>}
+          <p className="fine" style={{ textAlign: 'center' }}>
+            PocketZen only accesses its own hidden app folder in your Drive. You stay signed in until you log out.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

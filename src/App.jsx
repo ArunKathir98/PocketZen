@@ -4,6 +4,7 @@ import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { Logo } from './components/ui'
 import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
+import LocalWelcome from './components/LocalWelcome'
 import Login from './pages/Login'
 import PinLock from './pages/PinLock'
 import Records from './pages/Records'
@@ -27,7 +28,7 @@ const TABS = [
 const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
 
 export default function App() {
-  const { session, ready, locked, data, sync, reconnect } = useApp()
+  const { session, ready, locked, data, sync, reconnect, isLocal } = useApp()
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
   const tabs = TABS.filter((t) => !t[4] || data.settings[t[4]])
@@ -98,6 +99,8 @@ export default function App() {
           ))}
         </nav>
       </div>
+
+      {isLocal && <LocalWelcome />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (

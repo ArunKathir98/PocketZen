@@ -5,9 +5,11 @@ import { ACCOUNT_TYPES, COLORS } from '../lib/defaults'
 import { accountBalance } from '../lib/calc'
 import { currencySymbol, money, round2 } from '../lib/util'
 import { Empty, Modal } from '../components/ui'
+import { useDialog } from '../components/dialog'
 
 export default function Accounts() {
   const { data, remove } = useApp()
+  const { confirm, alert } = useDialog()
   const [edit, setEdit] = useState(null)
   const rows = useMemo(
     () => data.accounts.map((a) => ({ ...a, current: accountBalance(a, data.transactions) })),
@@ -16,10 +18,10 @@ export default function Accounts() {
   const total = round2(rows.reduce((s, a) => s + a.current, 0))
   const typeOf = (id) => ACCOUNT_TYPES.find((t) => t.id === id) || ACCOUNT_TYPES[5]
 
-  const del = (a) => {
+  const del = async (a) => {
     const used = data.transactions.some((t) => t.accountId === a.id || t.toAccountId === a.id)
-    if (used) return alert(`"${a.name}" has records. Delete or move those records first.`)
-    if (confirm(`Delete "${a.name}"?`)) remove('accounts', a.id)
+    if (used) return alert({ title: "Can't delete account", message: `"${a.name}" has records. Delete or edit those records first.` })
+    if (await confirm({ title: `Delete "${a.name}"?`, message: 'This account will be removed.', confirmText: 'Delete', danger: true })) remove('accounts', a.id)
   }
 
   return (

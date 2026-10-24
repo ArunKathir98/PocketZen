@@ -50,6 +50,8 @@ export const defaultSettings = () => ({
   currency: 'INR',
   dailyReminder: false,
   dailyReminderTime: '20:00',
+  showEmi: false,
+  showReminders: false,
 })
 
 export const emptyData = () => ({
@@ -60,6 +62,7 @@ export const emptyData = () => ({
   transactions: [],
   budgets: [],
   reminders: [],
+  emis: [],
   settings: defaultSettings(),
   pin: null, // { salt, hash }
 })

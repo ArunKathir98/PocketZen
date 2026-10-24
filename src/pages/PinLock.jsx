@@ -5,9 +5,11 @@ import { hashPin, verifyPin } from '../lib/pin'
 import { reverifyAccount } from '../lib/google'
 import PinPad from '../components/PinPad'
 import { GoogleG, Logo } from '../components/ui'
+import { useDialog } from '../components/dialog'
 
 export default function PinLock() {
   const { data, session, unlock, logout } = useApp()
+  const { confirm } = useDialog()
   const [mode, setMode] = useState('enter') // enter | forgot
   const fails = useRef(0)
   const [wait, setWait] = useState(0)
@@ -44,7 +46,7 @@ export default function PinLock() {
         <PinPad onComplete={check} />
         <div className="row" style={{ justifyContent: 'center', marginTop: 22, gap: 18 }}>
           <button className="btn sm ghost" onClick={() => setMode('forgot')}>Forgot PIN?</button>
-          <button className="btn sm ghost" onClick={() => confirm(`Log out ${session?.email}?`) && logout()}>Log out</button>
+          <button className="btn sm ghost" onClick={async () => (await confirm({ title: 'Log out?', message: `Sign out ${session?.email} on this device. Your data stays in Google Drive.`, confirmText: 'Log out', danger: true })) && logout()}>Log out</button>
         </div>
       </div>
     </div>

@@ -4,11 +4,15 @@ import { useApp } from '../lib/store'
 import { inRange, periodLabel, periodRange, shiftCursor } from '../lib/calc'
 import { currencySymbol, money, round2 } from '../lib/util'
 import { Empty, Modal } from '../components/ui'
+import { useDialog } from '../components/dialog'
+import CategoryDetail from '../components/CategoryDetail'
 
 export default function Budget() {
   const { data, remove } = useApp()
   const [cursor, setCursor] = useState(() => new Date())
+  const { confirm } = useDialog()
   const [edit, setEdit] = useState(null)
+  const [view, setView] = useState(null)
   const range = periodRange('month', cursor)
 
   const rows = useMemo(() => {
@@ -55,13 +59,15 @@ export default function Budget() {
             {rows.map(({ b, c, spent, left, pct }) => (
               <div className="card pad" key={b.id}>
                 <div className="row">
+                  <button className="row" style={{ flex: 1, minWidth: 0, textAlign: 'left' }} onClick={() => setView(c)} aria-label={`${c.name} expenses`}>
                   <span className="ico" style={{ width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 19, background: `${c.color}26` }}>{c.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800 }}>{c.name}</div>
                     <div className="muted num" style={{ fontSize: 12.5 }}>{money(spent)} of {money(b.amount)}</div>
                   </div>
+                  </button>
                   <button className="icon-btn" aria-label={`Edit ${c.name} budget`} onClick={() => setEdit(b)}><Pencil size={16} /></button>
-                  <button className="icon-btn danger" aria-label={`Remove ${c.name} budget`} onClick={() => confirm(`Remove budget for ${c.name}?`) && remove('budgets', b.id)}><Trash2 size={16} /></button>
+                  <button className="icon-btn danger" aria-label={`Remove ${c.name} budget`} onClick={async () => (await confirm({ title: `Remove ${c.name} budget?`, message: 'Your records are not affected.', confirmText: 'Remove', danger: true })) && remove('budgets', b.id)}><Trash2 size={16} /></button>
                 </div>
                 <div className={`bar ${pct >= 100 ? 'over' : pct >= 80 ? 'warn' : ''}`} style={{ margin: '10px 0 6px' }}><i style={{ width: `${pct}%` }} /></div>
                 <div className="row between" style={{ fontSize: 12, fontWeight: 700 }}>
@@ -73,6 +79,7 @@ export default function Budget() {
           </div>
         )}
       </div>
+      {view && <CategoryDetail category={view} onClose={() => setView(null)} />}
       {edit && <BudgetForm budget={edit} onClose={() => setEdit(null)} />}
     </div>
   )

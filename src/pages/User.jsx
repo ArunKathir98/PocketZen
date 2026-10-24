@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { BellRing, Download, KeyRound, LogOut, Moon, RefreshCw, Sun, SunMoon, Upload, Wallet } from 'lucide-react'
+import { BellRing, CalendarClock, Download, HandCoins, KeyRound, LogOut, Moon, RefreshCw, Sun, SunMoon, Upload, Wallet } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { CURRENCIES } from '../lib/defaults'
 import { hashPin, verifyPin } from '../lib/pin'
@@ -7,6 +7,7 @@ import { askNotificationPermission, notificationsSupported } from '../lib/remind
 import { download, todayStr } from '../lib/util'
 import PinPad from '../components/PinPad'
 import { Modal, Toggle } from '../components/ui'
+import { useDialog } from '../components/dialog'
 
 export const applyTheme = (t) => {
   localStorage.setItem('pz:theme', t)
@@ -15,7 +16,8 @@ export const applyTheme = (t) => {
 }
 
 export default function User() {
-  const { data, session, setSettings, setPin, logout, replaceAll, mergeIn, sync, syncNow, lock } = useApp()
+  const { data, session, setSettings, logout, replaceAll, mergeIn, sync, syncNow, lock } = useApp()
+  const { confirm, choose } = useDialog()
   const [theme, setTheme] = useState(() => localStorage.getItem('pz:theme') || 'system')
   const [pinFlow, setPinFlow] = useState(null) // 'set' | 'change' | 'remove'
   const [msg, setMsg] = useState('')
@@ -36,9 +38,18 @@ export default function User() {
     try {
       const inc = JSON.parse(await f.text())
       if (inc.app !== 'PocketZen' || !Array.isArray(inc.transactions)) throw new Error('bad')
-      const replace = confirm(
-        `Import ${inc.transactions.length} records, ${inc.accounts?.length || 0} accounts.\n\nOK = REPLACE all current data\nCancel = MERGE into current data`,
-      )
+      const choice = await choose({
+        title: 'Import backup',
+        message: `${inc.transactions.length} records, ${inc.accounts?.length || 0} accounts found.
+Replace your current data, or merge the backup into it?`,
+        actions: [
+          { label: 'Cancel', value: null, variant: 'ghost' },
+          { label: 'Merge', value: 'merge', variant: 'ghost' },
+          { label: 'Replace all', value: 'replace', variant: 'danger-solid' },
+        ],
+      })
+      if (!choice) return
+      const replace = choice === 'replace'
       replace ? replaceAll(inc) : mergeIn(inc)
       setMsg(replace ? 'Data replaced from backup.' : 'Backup merged into your data.')
     } catch {
@@ -46,12 +57,13 @@ export default function User() {
     }
   }
 
-  const toggleDaily = async (on) => {
-    if (on) {
-      const p = await askNotificationPermission()
-      if (p === 'denied') setMsg('Notifications are blocked in your browser — you will only see in-app reminders.')
-    }
+  const toggleDaily = (on) => {
     setSettings({ dailyReminder: on })
+    if (on) {
+      askNotificationPermission().then((p) => {
+        if (p === 'denied') setMsg('Notifications are blocked in your browser — you will only see in-app reminders.')
+      })
+    }
   }
 
   return (
@@ -95,6 +107,20 @@ export default function User() {
             </span>
             {s.dailyReminder && <input type="time" className="input" style={{ width: 'auto', padding: '8px 10px' }} value={s.dailyReminderTime} onChange={(e) => setSettings({ dailyReminderTime: e.target.value })} aria-label="Reminder time" />}
             <Toggle on={s.dailyReminder} onChange={toggleDaily} label="Daily expense reminder" />
+          </div>
+        </div>
+
+        <div className="section-title">Pages</div>
+        <div className="card list">
+          <div className="setting">
+            <span className="si"><HandCoins size={19} /></span>
+            <span className="main"><div className="t">EMI tracker</div><div className="s">Track loans, pending months and payments</div></span>
+            <Toggle on={!!s.showEmi} onChange={(v) => setSettings({ showEmi: v })} label="EMI tracker page" />
+          </div>
+          <div className="setting">
+            <span className="si"><CalendarClock size={19} /></span>
+            <span className="main"><div className="t">Bill reminders</div><div className="s">Recurring reminders for bills</div></span>
+            <Toggle on={!!s.showReminders} onChange={(v) => { setSettings({ showReminders: v }); if (v) askNotificationPermission() }} label="Bill reminders page" />
           </div>
         </div>
 

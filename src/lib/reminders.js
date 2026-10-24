@@ -74,7 +74,7 @@ async function show(title, body, tag) {
 export function checkDue(data, now = new Date()) {
   const fired = getFired()
   const messages = []
-  for (const r of data.reminders) {
+  for (const r of data.settings.showReminders ? data.reminders : []) {
     const o = nextOccurrence(r)
     if (!o || o > now) continue
     const key = `r:${r.id}:${r.doneCount || 0}`

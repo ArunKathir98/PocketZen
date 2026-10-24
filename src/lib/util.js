@@ -16,6 +16,13 @@ export const addDays = (d, n) => {
   x.setDate(x.getDate() + n)
   return x
 }
+export const addMonths = (dateStr, n) => {
+  const base = parseDate(dateStr)
+  const d = new Date(base.getFullYear(), base.getMonth() + n, 1)
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  d.setDate(Math.min(base.getDate(), last))
+  return toDateStr(d)
+}
 export const startOfWeek = (d) => {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
   const diff = (x.getDay() + 6) % 7 // Monday first

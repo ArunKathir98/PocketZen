@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CircleUserRound, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
+import { CircleUserRound, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { Logo } from './components/ui'
@@ -10,6 +10,7 @@ import Categories from './pages/Categories'
 import Accounts from './pages/Accounts'
 import Budget from './pages/Budget'
 import Reminders from './pages/Reminders'
+import Emi from './pages/Emi'
 import User from './pages/User'
 
 const TABS = [
@@ -17,7 +18,8 @@ const TABS = [
   ['categories', 'Categories', LayoutGrid, Categories],
   ['accounts', 'Accounts', Landmark, Accounts],
   ['budget', 'Budget', PiggyBank, Budget],
-  ['reminders', 'Reminders', BellRing, Reminders],
+  ['emi', 'EMIs', HandCoins, Emi, 'showEmi'],
+  ['reminders', 'Reminders', BellRing, Reminders, 'showReminders'],
   ['user', 'Profile', CircleUserRound, User],
 ]
 
@@ -27,6 +29,7 @@ export default function App() {
   const { session, locked, data, sync, reconnect } = useApp()
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
+  const tabs = TABS.filter((t) => !t[4] || data.settings[t[4]])
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
 
@@ -45,7 +48,8 @@ export default function App() {
   if (!session) return <><div className="ambient" /><Login /></>
   if (locked) return <><div className="ambient" /><PinLock /></>
 
-  const Page = TABS.find((t) => t[0] === tab)?.[3] || Records
+  const Page = tabs.find((t) => t[0] === tab)?.[3] || Records
+  const activeTab = tabs.some((t) => t[0] === tab) ? tab : 'records'
 
   return (
     <>
@@ -53,8 +57,8 @@ export default function App() {
       <div className="shell">
         <nav className="sidebar" aria-label="Main">
           <div className="brand"><Logo className="" alt="" /><span>Pocket<span className="grad-text">Zen</span></span></div>
-          {TABS.map(([k, label, Icon]) => (
-            <button key={k} className={`nav-item ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
+          {tabs.map(([k, label, Icon]) => (
+            <button key={k} className={`nav-item ${activeTab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={activeTab === k ? 'page' : undefined}>
               <Icon /> {label}
             </button>
           ))}
@@ -75,8 +79,8 @@ export default function App() {
         </main>
 
         <nav className="bottom-nav" aria-label="Main">
-          {TABS.map(([k, label, Icon]) => (
-            <button key={k} className={`nav-item ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={tab === k ? 'page' : undefined}>
+          {tabs.map(([k, label, Icon]) => (
+            <button key={k} className={`nav-item ${activeTab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={activeTab === k ? 'page' : undefined}>
               <Icon /> {label}
             </button>
           ))}

@@ -4,9 +4,11 @@ import { useApp } from '../lib/store'
 import { monthSpentByCategory } from '../lib/calc'
 import { currencySymbol, money, nowTimeStr, round2, todayStr } from '../lib/util'
 import { Modal } from './ui'
+import { useDialog } from './dialog'
 
 export default function AddSheet({ initial, defaultDate, onClose }) {
   const { data, add, update, remove } = useApp()
+  const { confirm } = useDialog()
   const editing = !!initial?.id
   const [type, setType] = useState(initial?.type || 'expense')
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
@@ -56,8 +58,8 @@ export default function AddSheet({ initial, defaultDate, onClose }) {
     onClose()
   }
 
-  const del = () => {
-    if (confirm('Delete this record?')) {
+  const del = async () => {
+    if (await confirm({ title: 'Delete this record?', message: 'This cannot be undone.', confirmText: 'Delete', danger: true })) {
       remove('transactions', initial.id)
       onClose()
     }

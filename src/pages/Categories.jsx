@@ -3,19 +3,26 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { COLORS, EMOJIS } from '../lib/defaults'
 import { Empty, Modal } from '../components/ui'
+import { useDialog } from '../components/dialog'
+import CategoryDetail from '../components/CategoryDetail'
 
 export default function Categories() {
   const { data, remove } = useApp()
   const [type, setType] = useState('expense')
+  const { confirm } = useDialog()
   const [edit, setEdit] = useState(null)
+  const [view, setView] = useState(null)
   const list = data.categories.filter((c) => c.type === type)
 
-  const del = (c) => {
+  const del = async (c) => {
     const used = data.transactions.filter((t) => t.categoryId === c.id).length
-    const msg = used
-      ? `"${c.name}" is used by ${used} record(s). They'll show as Uncategorized. Delete anyway?`
-      : `Delete "${c.name}"?`
-    if (!confirm(msg)) return
+    const ok = await confirm({
+      title: `Delete "${c.name}"?`,
+      message: used ? `${used} record${used > 1 ? 's use' : ' uses'} this category. They'll show as Uncategorized.` : 'This category will be removed.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     remove('categories', c.id)
     data.budgets.filter((b) => b.categoryId === c.id).forEach((b) => remove('budgets', b.id))
   }
@@ -37,8 +44,10 @@ export default function Categories() {
           <div className="card list">
             {list.map((c) => (
               <div className="item" key={c.id}>
-                <span className="ico" style={{ background: `${c.color}26` }}>{c.icon}</span>
-                <span className="main"><div className="t">{c.name}</div></span>
+                <button className="main-btn" onClick={() => setView(c)} aria-label={`${c.name} details`}>
+                  <span className="ico" style={{ background: `${c.color}26` }}>{c.icon}</span>
+                  <span className="main"><div className="t">{c.name}</div><div className="s">{data.transactions.filter((t) => t.categoryId === c.id).length} records · tap to view</div></span>
+                </button>
                 <button className="icon-btn" aria-label={`Edit ${c.name}`} onClick={() => setEdit(c)}><Pencil size={17} /></button>
                 <button className="icon-btn danger" aria-label={`Delete ${c.name}`} onClick={() => del(c)}><Trash2 size={17} /></button>
               </div>
@@ -46,6 +55,7 @@ export default function Categories() {
           </div>
         )}
       </div>
+      {view && <CategoryDetail category={view} onClose={() => setView(null)} />}
       {edit && <CategoryForm cat={edit} onClose={() => setEdit(null)} />}
     </div>
   )

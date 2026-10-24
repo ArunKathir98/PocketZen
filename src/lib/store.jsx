@@ -19,7 +19,7 @@ const readJson = (k) => {
 const normalize = (d) => {
   const base = emptyData()
   const out = { ...base, ...d, settings: { ...base.settings, ...(d?.settings || {}) } }
-  for (const k of ['accounts', 'categories', 'transactions', 'budgets', 'reminders']) if (!Array.isArray(out[k])) out[k] = base[k]
+  for (const k of ['accounts', 'categories', 'transactions', 'budgets', 'reminders', 'emis']) if (!Array.isArray(out[k])) out[k] = base[k]
   return out
 }
 
@@ -232,6 +232,7 @@ export function AppProvider({ children }) {
             transactions: mergeBy(d.transactions, n.transactions),
             budgets: mergeBy(d.budgets, n.budgets),
             reminders: mergeBy(d.reminders, n.reminders),
+            emis: mergeBy(d.emis, n.emis),
           }
         }),
     }),

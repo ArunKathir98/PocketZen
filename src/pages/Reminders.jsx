@@ -4,9 +4,11 @@ import { useApp } from '../lib/store'
 import { REPEATS, askNotificationPermission, nextOccurrence } from '../lib/reminders'
 import { currencySymbol, fmtDateTime, money, toDateStr, toTimeStr } from '../lib/util'
 import { Empty, Modal } from '../components/ui'
+import { useDialog } from '../components/dialog'
 
 export default function Reminders() {
   const { data, update, remove } = useApp()
+  const { confirm } = useDialog()
   const [edit, setEdit] = useState(null)
   const now = new Date()
   const rows = data.reminders
@@ -39,7 +41,7 @@ export default function Reminders() {
                 </span>
                 {next && <button className="icon-btn" title="Mark as done" aria-label="Mark as done" onClick={() => update('reminders', r.id, { doneCount: (r.doneCount || 0) + 1 })}><Check size={18} /></button>}
                 <button className="icon-btn" aria-label="Edit" onClick={() => setEdit(r)}><Pencil size={16} /></button>
-                <button className="icon-btn danger" aria-label="Delete" onClick={() => confirm(`Delete "${r.title}"?`) && remove('reminders', r.id)}><Trash2 size={16} /></button>
+                <button className="icon-btn danger" aria-label="Delete" onClick={async () => (await confirm({ title: `Delete "${r.title}"?`, message: 'This reminder will be removed.', confirmText: 'Delete', danger: true })) && remove('reminders', r.id)}><Trash2 size={16} /></button>
               </div>
             )
           })}

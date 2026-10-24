@@ -10,7 +10,11 @@ const LOCAL_SUB = 'local'
 const legacyKey = (sub) => `pz:data:${sub}` // older builds kept data in localStorage
 const idbKey = (sub) => `data:${sub}`
 const dirtyKey = (sub) => `pz:dirty:${sub}`
+const syncedKey = (sub) => `pz:synced:${sub}`
+const getSynced = (sub) => Number(localStorage.getItem(syncedKey(sub)) || 0)
+const setSynced = (sub, ts) => localStorage.setItem(syncedKey(sub), String(ts))
 const LOCK_AFTER_MS = 60 * 1000
+const PULL_EVERY_MS = 15 * 1000
 
 const readJson = (k) => {
   try {
@@ -95,9 +99,28 @@ export function AppProvider({ children }) {
     if (!s || s.mode === 'local' || pushing.current) return
     pushing.current = true
     setSync('syncing')
-    const snapshot = dataRef.current
+    let snapshot = dataRef.current
     try {
+      // Drive may have changed since this device last synced (another phone, browser or tab).
+      // Merge instead of overwriting, so nobody's changes are lost.
+      const remote = await google.driveLoad(s.sub, s.email)
+      if (remote && (remote.updatedAt || 0) > getSynced(s.sub)) {
+        const r = normalize(remote)
+        const local = dataRef.current // re-read: the user may have edited while we were loading
+        const m = mergeData(r, local)
+        const merged = {
+          ...m,
+          settings: { ...r.settings, ...local.settings, showEmi: m.settings.showEmi, showReminders: m.settings.showReminders, showLoans: m.settings.showLoans, showGroups: m.settings.showGroups },
+          pin: local.pin || r.pin,
+          updatedAt: Date.now(),
+        }
+        dataRef.current = merged
+        setData(merged)
+        persistLocal(s.sub, merged)
+        snapshot = merged
+      }
       await google.driveSave(s.sub, snapshot, s.email)
+      setSynced(s.sub, snapshot.updatedAt)
       if (dataRef.current.updatedAt === snapshot.updatedAt) localStorage.removeItem(dirtyKey(s.sub))
       else schedulePush(500)
       setSync('synced')
@@ -131,10 +154,14 @@ export function AppProvider({ children }) {
         persistLocal(s.sub, next)
         dataRef.current = next
         setData(next)
+        setSynced(s.sub, remote.updatedAt || 0)
         setSync('synced')
       } else if (!remote || dirty || (local.updatedAt || 0) > (remote.updatedAt || 0)) {
-        await push()
-      } else setSync('synced')
+        await push() // merges first if Drive moved on
+      } else {
+        setSynced(s.sub, remote.updatedAt || 0)
+        setSync('synced')
+      }
     } catch (e) {
       setSync(classify(e))
     }
@@ -149,13 +176,20 @@ export function AppProvider({ children }) {
   // Retry when the network or the tab comes back; auto-lock after being away.
   useEffect(() => {
     let hiddenAt = 0
+    let lastPull = 0
     const onVis = () => {
       if (document.visibilityState === 'hidden') hiddenAt = Date.now()
       else {
         if (hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS && dataRef.current.pin) setLocked(true)
         hiddenAt = 0
         const s = sessionRef.current
-        if (s && s.mode !== 'local' && localStorage.getItem(dirtyKey(s.sub))) schedulePush(300)
+        if (s && s.mode !== 'local') {
+          if (localStorage.getItem(dirtyKey(s.sub))) schedulePush(300)
+          else if (Date.now() - lastPull > PULL_EVERY_MS) {
+            lastPull = Date.now()
+            pull()
+          }
+        }
       }
     }
     const onOnline = () => sessionRef.current && sessionRef.current.mode !== 'local' && pull()

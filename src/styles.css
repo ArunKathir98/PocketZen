@@ -331,3 +331,8 @@ a.setting:hover, button.setting:hover { background: var(--surface-2); }
 .or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--muted); font-size: 12px; font-weight: 700; }
 .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .sync.st-local i { background: var(--g3); }
+
+/* app-like feel: UI text isn't selectable (inputs, and anything marked .selectable, still are) */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select, [contenteditable='true'], .selectable { -webkit-user-select: text; user-select: text; }
+img, svg { -webkit-user-drag: none; user-drag: none; }

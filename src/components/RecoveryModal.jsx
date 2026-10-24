@@ -16,7 +16,7 @@ export default function RecoveryModal({ code, onClose }) {
       footer={<button className="btn primary block" onClick={onClose}>I've saved it</button>}>
       <div className="stack" style={{ alignItems: 'center', textAlign: 'center' }}>
         <span className="dlg-ico"><KeyRound size={22} /></span>
-        <div className="num" aria-label="Recovery code" style={{ fontSize: 28, fontWeight: 900, letterSpacing: 2, padding: '10px 6px', userSelect: 'all' }}>{code}</div>
+        <div className="num" aria-label="Recovery code" style={{ fontSize: 28, fontWeight: 900, letterSpacing: 2, padding: '10px 6px', userSelect: 'all', WebkitUserSelect: 'all' }}>{code}</div>
         <button className="btn sm ghost" onClick={copy}><Copy size={14} /> {copied ? 'Copied' : 'Copy code'}</button>
         <p className="muted" style={{ fontSize: 13 }}>
           You're using PocketZen without a Google account, so this code is the <b>only way to reset a forgotten PIN</b>.

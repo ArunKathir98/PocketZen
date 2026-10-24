@@ -131,7 +131,7 @@ export default function GroupView({ entry, onBack, publicMode = false }) {
         <div className="row wrap" style={{ gap: 8 }}>
           <button className="btn primary" style={{ flex: 1 }} onClick={() => setSheet('settle')}><Scale size={16} /> {admin ? 'Settle up' : 'Who pays'}{plan.length ? ` (${plan.length})` : ''}</button>
           <button className="btn ghost" style={{ flex: 1 }} onClick={() => setSheet('summary')}><FileDown size={16} /> Summary</button>
-          <button className="btn ghost" style={{ flex: 1 }} onClick={() => setSheet('invite')}><Share2 size={16} /> Invite</button>
+          {google.groupSharingEnabled() && <button className="btn ghost" style={{ flex: 1 }} onClick={() => setSheet('invite')}><Share2 size={16} /> Invite</button>}
         </div>
 
         <div className="section-title" style={{ margin: '6px 4px 0' }}>Expenses</div>
@@ -223,7 +223,7 @@ export default function GroupView({ entry, onBack, publicMode = false }) {
       {form?.kind === 'rename' && <RenameForm group={group} dispatch={dispatch} onClose={() => setForm(null)} />}
       {sheet === 'settle' && <SettleUp group={group} balances={balances} plan={plan} money={money} dispatch={dispatch} readOnly={!admin} onClose={() => setSheet(null)} />}
       {sheet === 'summary' && <Summary group={group} balances={balances} plan={plan} money={money} onClose={() => setSheet(null)} />}
-      {sheet === 'invite' && <Invite group={group} onClose={() => setSheet(null)} />}
+      {sheet === 'invite' && <Invite group={group} admin={admin} email={session?.email} onClose={() => setSheet(null)} />}
     </div>
   )
 }
@@ -495,8 +495,13 @@ function Summary({ group, balances, plan, money, onClose }) {
   )
 }
 
-function Invite({ group, onClose }) {
+function Invite({ group, admin, email, onClose }) {
   const [msg, setMsg] = useState('')
+  const [ready, setReady] = useState(!admin) // the admin's file is private until now
+  useEffect(() => {
+    if (!admin) return
+    google.shareGroupFile(group.id, email).then(() => setReady(true)).catch(() => setMsg("Couldn't turn on link sharing. Check your connection and Google permission, then try again."))
+  }, [admin, group.id, email])
   const link = `${window.location.origin}/?view=${group.id}`
   const text = `See who owes what in our group "${group.name}" on PocketZen:\n${link}\n\nNo sign-in needed. It's view only.`
   const copy = async (what, value) => {
@@ -509,7 +514,7 @@ function Invite({ group, onClose }) {
     copy('Invite message', text)
   }
   return (
-    <Modal title="Share this group" onClose={onClose} footer={<button className="btn primary block" onClick={share}><Share2 size={16} /> Share invite</button>}>
+    <Modal title="Share this group" onClose={onClose} footer={<button className="btn primary block" disabled={!ready} onClick={share}><Share2 size={16} /> {ready ? 'Share invite' : 'Preparing link…'}</button>}>
       <div className="stack" style={{ textAlign: 'center' }}>
         <p className="muted" style={{ fontSize: 13 }}>Anyone with this link can <b>view</b> the group, with no sign-in. Only the admin can change it.</p>
         <div className="num selectable" aria-label="Group ID" style={{ fontSize: 13, fontWeight: 700, padding: '8px 4px', wordBreak: 'break-all' }}>{formatGroupId(group.id)}</div>

@@ -1,3 +1,5 @@
+import { GROUP_SHARING } from '../config'
+
 // Google Identity Services (token model) + Drive.
 // Personal data lives in the user's own hidden Drive "app data" folder, visible only to this app.
 // Shared groups are ordinary files PocketZen creates in the admin's Drive (drive.file scope), readable by
@@ -165,6 +167,8 @@ export async function reverifyAccount(expectedSub, hint) {
 }
 
 // ---------- Shared groups (files in the admin's Drive) ----------
+/** Join / Invite / view links are on only when the switch is on AND the API key exists. */
+export const groupSharingEnabled = () => GROUP_SHARING && hasApiKey()
 export const hasGroupScope = () => localStorage.getItem(GROUP_FLAG) === '1'
 const hasApiKey = () => !!API_KEY && !API_KEY.startsWith('your-')
 
@@ -188,7 +192,7 @@ const multipart = (meta, body) => {
   }
 }
 
-/** Creates the group's file in the admin's Drive and lets anyone with the link read it. Returns the file id. */
+/** Creates the group's file in the admin's Drive. It is private until the admin shares it. Returns the file id. */
 export async function createGroupFile(name, state, hint) {
   const m = multipart({ name: `PocketZen group - ${name}.json`, mimeType: 'application/json' }, JSON.stringify(state))
   const res = await api(
@@ -197,12 +201,16 @@ export async function createGroupFile(name, state, hint) {
     hint,
   )
   const { id } = await res.json()
+  return id
+}
+
+/** Lets anyone with the link read the group (view only). Called when the admin taps Invite. */
+export async function shareGroupFile(id, hint) {
   await api(
     `https://www.googleapis.com/drive/v3/files/${id}/permissions`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone', allowFileDiscovery: false }) },
     hint,
   )
-  return id
 }
 
 /** Admin read/write (signed in). */

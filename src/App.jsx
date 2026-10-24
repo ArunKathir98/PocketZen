@@ -5,6 +5,7 @@ import { checkDue } from './lib/reminders'
 import { clearPendingJoin, getPendingJoin } from './lib/pendingJoin'
 import { isGroupId, parseGroupRef } from './lib/groupState'
 import PublicGroup from './pages/PublicGroup'
+import { groupSharingEnabled } from './lib/google'
 import { Logo } from './components/ui'
 import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
 import LocalWelcome from './components/LocalWelcome'
@@ -74,7 +75,9 @@ export default function App() {
   if (!ready) return <div className="auth"><Logo className="logo-lg" /></div>
   if (session && locked) return <><div className="ambient" /><PinLock /></>
   // A group link opened by someone not signed in with Google: show it read-only, no sign-in needed.
-  const link = getPendingJoin() ? parseGroupRef(getPendingJoin()) : ''
+  const sharingOn = groupSharingEnabled()
+  if (!sharingOn && getPendingJoin()) clearPendingJoin() // group links are switched off
+  const link = sharingOn && getPendingJoin() ? parseGroupRef(getPendingJoin()) : ''
   if (link && !isGroupId(link)) clearPendingJoin()
   if (isGroupId(link) && showPublic && (!session || isLocal)) {
     return <PublicGroup id={link} onClose={(keep) => { if (!keep) clearPendingJoin(); setShowPublic(false) }} />

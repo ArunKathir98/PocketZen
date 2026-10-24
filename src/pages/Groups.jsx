@@ -44,7 +44,8 @@ export default function Groups() {
   const { data, remove } = useApp()
   const [openId, setOpenId] = useState(null)
   const [create, setCreate] = useState(false)
-  const [join, setJoin] = useState(() => (getPendingJoin() ? parseGroupRef(getPendingJoin()) : null)) // null = closed, '' = manual entry
+  const sharing = google.groupSharingEnabled()
+  const [join, setJoin] = useState(() => (sharing && getPendingJoin() ? parseGroupRef(getPendingJoin()) : null)) // null = closed, '' = manual entry
 
   // groups saved by the earlier server-based version no longer exist: clean them out
   useEffect(() => { data.groups.filter((g) => !g.role).forEach((g) => remove('groups', g.id)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -58,18 +59,18 @@ export default function Groups() {
       <div className="page-head">
         <div><h1>Groups</h1><p>Split expenses with friends</p></div>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn ghost" onClick={() => setJoin('')}><UserPlus size={17} /> Join</button>
+          {sharing && <button className="btn ghost" onClick={() => setJoin('')}><UserPlus size={17} /> Join</button>}
           <button className="btn primary" onClick={() => setCreate(true)}><Plus size={18} /> New</button>
         </div>
       </div>
       {groups.length === 0 ? (
-        <Empty emoji="🧾" title="No groups yet" text="Create a group for a trip, flat or event and add the expenses. Friends open your link to see who owes what. They can view, and you stay in control."
-          action={<div className="row" style={{ justifyContent: 'center', gap: 8 }}><button className="btn primary" onClick={() => setCreate(true)}>Create a group</button><button className="btn ghost" onClick={() => setJoin('')}>Join with a link</button></div>} />
+        <Empty emoji="🧾" title="No groups yet" text={sharing ? 'Create a group for a trip, flat or event and add the expenses. Friends open your link to see who owes what. They can view, and you stay in control.' : 'Create a group for a trip, flat or event, add the expenses, and see who owes what with settle-up suggestions and a PDF summary.'}
+          action={<div className="row" style={{ justifyContent: 'center', gap: 8 }}><button className="btn primary" onClick={() => setCreate(true)}>Create a group</button>{sharing && <button className="btn ghost" onClick={() => setJoin('')}>Join with a link</button>}</div>} />
       ) : (
         <div className="card list">{groups.map((g) => <GroupCard key={g.id} entry={g} onOpen={() => setOpenId(g.id)} />)}</div>
       )}
       {create && <CreateGroup onClose={() => setCreate(false)} onCreated={(id) => { setCreate(false); setOpenId(id) }} />}
-      {join !== null && <JoinGroup initial={join} onClose={() => { setJoin(null); clearPendingJoin() }} onJoined={(id) => { setJoin(null); clearPendingJoin(); setOpenId(id) }} />}
+      {sharing && join !== null && <JoinGroup initial={join} onClose={() => { setJoin(null); clearPendingJoin() }} onJoined={(id) => { setJoin(null); clearPendingJoin(); setOpenId(id) }} />}
     </div>
   )
 }
@@ -110,7 +111,7 @@ function CreateGroup({ onClose, onCreated }) {
         <div className="field"><label htmlFor="gc">Currency</label>
           <select id="gc" className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select></div>
         <p className="muted" style={{ fontSize: 12.5 }}>
-          The group is saved as a file in <b>your</b> Google Drive. Anyone you send the link to can <b>view</b> it; only you can make changes. Google will ask once for permission to create that file.
+          The group is saved as a file in <b>your</b> Google Drive and stays private{google.groupSharingEnabled() ? ' until you tap Invite. Then anyone with the link can <b>view</b> it; only you can make changes' : ''}. Google will ask once for permission to create that file.
         </p>
       </div>
     </Modal>

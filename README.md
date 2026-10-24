@@ -34,13 +34,17 @@ Also: PIN lock, password-protected backups, install prompt, offline use, in-app 
 ### How groups work (no server)
 
 - The admin (a Google user) creates a group. PocketZen saves it as a file `PocketZen group - <name>.json` in the
-  admin's Drive and turns on "anyone with the link can view". The group ID is that file's ID.
+  admin's Drive. It is **private** until the admin taps **Invite**, which turns on "anyone with the link can view".
+  The group ID is that file's ID.
 - Anyone with the link `…/?view=<id>` sees the expenses, balances and who-pays-whom, **read-only, no sign-in**. They can
   download or share the PDF. Signed-in users can also save the group to their list and pick which person they are.
 - Only the admin can add or edit expenses, payments, people and events, and tick suggested payments as paid.
   Admin edits are queued offline and saved to Drive when back online.
 - Viewers refresh about every 30 s. Deleting the group deletes the file; sharing stops immediately.
 - Splitting is equal between the people chosen; amounts are handled in whole cents so shares always add up.
+- **Sharing needs the API key.** Join, Invite and view links appear only when `VITE_GOOGLE_API_KEY` was set at build time.
+  Without it they are hidden and groups still work privately for the admin (expenses, settle-up, PDF). To switch sharing
+  off even when the key exists, set `GROUP_SHARING = false` in `src/config.js`.
 
 ## Setup
 
@@ -53,7 +57,7 @@ Also: PIN lock, password-protected backups, install prompt, offline use, in-app 
    While testing, add yourself under **Test users**; **Publish app** when ready.
 3. **Credentials → OAuth client ID → Web application.** Authorized JavaScript origins: `http://localhost:5173` and your
    production origin (no trailing slash).
-4. **Credentials → API key** (used only so people with a group link can read it without signing in). Under
+4. **Credentials → API key** (optional; it turns on group sharing, used so people with a group link can read it without signing in). Under
    *Application restrictions* choose **Websites** and add your origins (`https://<your-domain>/*`,
    `http://localhost:5173/*`); under *API restrictions* choose **Google Drive API**.
 
@@ -100,7 +104,7 @@ npm run icons      # regenerate PWA icons from src/assets/logo-source.jpg
 npm run poster -- https://your-app-url --form https://forms.gle/xxxx   # shareable poster + QR (needs a build first)
 ```
 
-`src/config.js` holds the feedback form link. The poster script also refreshes `public/share-poster.jpg`, which the
+`src/config.js` holds the feedback form link and the group-sharing switch. The poster script also refreshes `public/share-poster.jpg`, which the
 in-app Share button attaches.
 
 ## Project layout

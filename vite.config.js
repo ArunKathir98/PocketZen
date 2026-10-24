@@ -2,7 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const api = { '/api': 'http://localhost:8787' } // the local Worker: `npm run worker`
+
 export default defineConfig({
+  server: { proxy: api },
+  preview: { proxy: api },
   plugins: [
     react(),
     VitePWA({

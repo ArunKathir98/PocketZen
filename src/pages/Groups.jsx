@@ -15,7 +15,8 @@ const colors = ['#14b8a6', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#f97316'
 const colorOf = (s) => colors[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length]
 
 const friendlyError = (e) =>
-  e.code === 'offline' ? 'You seem to be offline. Groups need an internet connection.'
+  e.code === 'no_server' ? "The groups server isn't reachable. If you're running locally, start it with `npm run worker` in another terminal."
+    : e.code === 'offline' ? 'You seem to be offline. Groups need an internet connection.'
     : e.code === 'not_found' ? 'No group found with that ID. Check it and try again.'
     : e.code === 'bad_id' ? "That doesn't look like a group ID (12 letters and numbers)."
     : 'Groups could not be reached right now. Please try again in a moment.'

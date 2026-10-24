@@ -40,7 +40,7 @@ creates everything. No dashboard setup.
 - A group is addressed by a random 12-character ID; anyone with the ID can view and edit it. Idle groups are erased after 12 months.
 - Edits are small "set entity" operations resolved last-write-wins per entity; clients poll every ~6 s while visible and queue edits offline.
 - Group logic shared by the app and the Worker: `src/lib/groupState.js` (splits, balances, settle-up suggestions).
-- `npm run dev` has no `/api`. To try groups locally: `npm run build && npx wrangler dev`.
+- Locally, `npm run dev` proxies `/api` to a local Worker. Start that in a second terminal with `npm run worker` (it builds, then runs `wrangler dev` on port 8787), then use the app at http://localhost:5173.
 - Groups, budgets, EMIs, loans and reminders need a Google account; the no-account mode is Records, Categories and Accounts.
 
 ## Notes & limits

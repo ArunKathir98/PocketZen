@@ -10,7 +10,13 @@ async function call(method, path, body) {
   }
   let data = null
   try { data = await res.json() } catch { /* not JSON (e.g. the dev server has no API) */ }
-  if (!res.ok || !data) {
+  if (!data) {
+    const e = new Error('no_server')
+    e.code = 'no_server'
+    e.status = res.status
+    throw e
+  }
+  if (!res.ok) {
     const e = new Error(data?.error || `http_${res.status}`)
     e.code = res.status === 404 && data?.error === 'not_found' ? 'not_found' : res.status === 413 ? 'too_large' : res.status === 400 ? 'bad_id' : 'error'
     e.status = res.status

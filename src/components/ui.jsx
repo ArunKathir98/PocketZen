@@ -1,19 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import logo from '../assets/logo.png'
 
 export const Logo = ({ className = 'logo-lg', alt = 'PocketZen' }) => <img src={logo} className={className} alt={alt} />
 
+// stack of open modals: only the top one reacts to Escape, and scrolling stays locked until all are closed
+const openModals = []
+
 export function Modal({ title, onClose, children, footer }) {
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const id = Symbol('modal')
+    openModals.push(id)
+    const onKey = (e) => e.key === 'Escape' && openModals[openModals.length - 1] === id && closeRef.current()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      openModals.splice(openModals.indexOf(id), 1)
+      if (!openModals.length) document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [])
   return (
     <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>

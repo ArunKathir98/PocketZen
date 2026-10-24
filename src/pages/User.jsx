@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { BellRing, CalendarClock, DatabaseBackup, HandCoins, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
+import { BellRing, CalendarClock, DatabaseBackup, HandCoins, Handshake, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { CURRENCIES } from '../lib/defaults'
 import { hashPin, hashRecovery, makeRecoveryCode, verifyPin } from '../lib/pin'
@@ -159,6 +159,11 @@ export default function User() {
             <span className="si"><HandCoins size={19} /></span>
             <span className="main"><div className="t">EMI tracker</div><div className="s">Track loans, pending months and payments</div></span>
             <Toggle on={!!s.showEmi} onChange={(v) => setSettings({ showEmi: v })} label="EMI tracker page" />
+          </div>
+          <div className="setting">
+            <span className="si"><Handshake size={19} /></span>
+            <span className="main"><div className="t">Loans &amp; people</div><div className="s">Money lent or borrowed, with optional interest</div></span>
+            <Toggle on={!!s.showLoans} onChange={(v) => { setSettings({ showLoans: v }); if (v) askNotificationPermission() }} label="Loans and people page" />
           </div>
           <div className="setting">
             <span className="si"><CalendarClock size={19} /></span>

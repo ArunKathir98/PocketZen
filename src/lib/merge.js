@@ -49,6 +49,25 @@ export function mergeData(base, inc) {
   const emiIds = seen(base.emis || [])
   const emis = [...(base.emis || []), ...(inc.emis || []).filter((e) => !emiIds.has(e.id)).map((e) => ({ ...e, accountId: ra(e.accountId) }))]
 
+  // people are unified by name; loans keep their ids and are re-pointed at the kept person / account
+  const people = [...(base.people || [])]
+  const pMap = new Map()
+  for (const p of inc.people || []) {
+    const hit = people.find((x) => x.id === p.id) || people.find((x) => norm(x.name) === norm(p.name))
+    if (hit) pMap.set(p.id, hit.id)
+    else {
+      people.push(p)
+      pMap.set(p.id, p.id)
+    }
+  }
+  const loanIds = seen(base.loans || [])
+  const loans = [
+    ...(base.loans || []),
+    ...(inc.loans || [])
+      .filter((l) => !loanIds.has(l.id))
+      .map((l) => ({ ...l, personId: pMap.get(l.personId) ?? l.personId, events: (l.events || []).map((e) => ({ ...e, accountId: ra(e.accountId) })) })),
+  ]
+
   const remIds = seen(base.reminders)
   const reminders = [...base.reminders, ...(inc.reminders || []).filter((r) => !remIds.has(r.id))]
 
@@ -59,11 +78,14 @@ export function mergeData(base, inc) {
     transactions,
     budgets,
     emis,
+    people,
+    loans,
     reminders,
     settings: {
       ...base.settings,
       showEmi: !!(base.settings?.showEmi || inc.settings?.showEmi),
       showReminders: !!(base.settings?.showReminders || inc.settings?.showReminders),
+      showLoans: !!(base.settings?.showLoans || inc.settings?.showLoans),
     },
     pin: base.pin || inc.pin || null,
   }
@@ -71,4 +93,4 @@ export function mergeData(base, inc) {
 
 /** True when a dataset holds anything the user actually entered. */
 export const hasUserData = (d) =>
-  !!d && ((d.transactions?.length || 0) + (d.budgets?.length || 0) + (d.emis?.length || 0) + (d.reminders?.length || 0) > 0)
+  !!d && ((d.transactions?.length || 0) + (d.budgets?.length || 0) + (d.emis?.length || 0) + (d.reminders?.length || 0) + (d.loans?.length || 0) > 0)

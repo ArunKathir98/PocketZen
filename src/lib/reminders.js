@@ -1,5 +1,6 @@
 import { addDays, parseDate, toDateStr } from './util'
 import { fireReminder, notificationsSupported } from './notify'
+import { hasMonthlyCycle, loanLabel, loanStats } from './loans'
 
 export { notificationsSupported }
 
@@ -72,6 +73,42 @@ export function checkDue(data, now = new Date()) {
     const body = r.amount ? `Due now · ${r.title}` : r.title
     fireReminder({ title: `Bill reminder: ${r.title}`, body, tag: key }, data.settings)
     messages.push({ id: key, title: r.title, body: 'Bill is due' })
+  }
+  if (data.settings.showLoans) {
+    const today = toDateStr(now)
+    const ym = today.slice(0, 7)
+    for (const l of data.loans || []) {
+      if (!l.remind) continue
+      const who = (data.people || []).find((p) => p.id === l.personId)?.name || 'someone'
+      const st = loanStats(l, today)
+      if (st.settled) continue
+      const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: data.settings.currency || 'INR' }).format(n)
+      // monthly interest day (the loan's start day, clamped to the month length)
+      if (hasMonthlyCycle(l) && st.principalBalance > 0) {
+        const [y, m] = [now.getFullYear(), now.getMonth()]
+        const day = Math.min(Number(l.startDate.slice(8, 10)), new Date(y, m + 1, 0).getDate())
+        const at = new Date(y, m, day, 9, 0)
+        const key = `loan:${l.id}:${ym}`
+        if (now >= at && !fired[key]) {
+          markFired(key)
+          const body = st.interestDue > 0 ? `Interest due ${fmt(st.interestDue)}` : 'Interest day'
+          const title = l.direction === 'lent' ? `Collect interest from ${who}` : `Pay interest to ${who}`
+          fireReminder({ title, body, tag: key }, data.settings)
+          messages.push({ id: key, title, body })
+        }
+      }
+      // final repayment date
+      if (l.dueDate && today >= l.dueDate) {
+        const key = `loandue:${l.id}`
+        if (!fired[key]) {
+          markFired(key)
+          const title = l.direction === 'lent' ? `${who} should repay today` : `Repay ${who} today`
+          const body = `${loanLabel(l)} · outstanding ${fmt(st.outstanding)}`
+          fireReminder({ title, body, tag: key }, data.settings)
+          messages.push({ id: key, title, body })
+        }
+      }
+    }
   }
   const s = data.settings
   if (s.dailyReminder) {

@@ -52,6 +52,7 @@ export const defaultSettings = () => ({
   dailyReminderTime: '20:00',
   showEmi: false,
   showReminders: false,
+  showLoans: false,
   notifySound: true,
 })
 
@@ -64,6 +65,8 @@ export const emptyData = () => ({
   budgets: [],
   reminders: [],
   emis: [],
+  people: [],
+  loans: [],
   settings: defaultSettings(),
   pin: null, // { salt, hash }
 })

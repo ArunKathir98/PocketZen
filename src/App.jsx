@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CircleUserRound, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
+import { CircleUserRound, Handshake, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { Logo } from './components/ui'
@@ -13,6 +13,7 @@ import Accounts from './pages/Accounts'
 import Budget from './pages/Budget'
 import Reminders from './pages/Reminders'
 import Emi from './pages/Emi'
+import Loans from './pages/Loans'
 import User from './pages/User'
 
 const TABS = [
@@ -21,6 +22,7 @@ const TABS = [
   ['accounts', 'Accounts', Landmark, Accounts],
   ['budget', 'Budget', PiggyBank, Budget],
   ['emi', 'EMIs', HandCoins, Emi, 'showEmi'],
+  ['loans', 'Loans', Handshake, Loans, 'showLoans'],
   ['reminders', 'Reminders', BellRing, Reminders, 'showReminders'],
   ['user', 'Profile', CircleUserRound, User],
 ]

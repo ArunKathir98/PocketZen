@@ -67,7 +67,7 @@ export function DialogProvider({ children }) {
             <span className={`dlg-ico ${danger ? 'danger' : ''}`}><Icon size={22} /></span>
             <h2 id="dlg-t">{dlg.title || 'Are you sure?'}</h2>
             {dlg.message && <p id="dlg-m">{dlg.message}</p>}
-            <div className="dlg-actions">
+            <div className={`dlg-actions${dlg.actions.length > 2 ? ' many' : ''}`}>
               {dlg.actions.map((a) => (
                 <button
                   key={a.label}

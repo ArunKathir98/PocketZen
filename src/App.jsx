@@ -3,7 +3,7 @@ import { CircleUserRound, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { Logo } from './components/ui'
-import { InstallBanner, NotifyBanner } from './components/Banners'
+import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
 import Login from './pages/Login'
 import PinLock from './pages/PinLock'
 import Records from './pages/Records'
@@ -24,10 +24,10 @@ const TABS = [
   ['user', 'Profile', CircleUserRound, User],
 ]
 
-const SYNC_LABEL = { idle: 'Local', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
+const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
 
 export default function App() {
-  const { session, locked, data, sync, reconnect } = useApp()
+  const { session, ready, locked, data, sync, reconnect } = useApp()
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
   const tabs = TABS.filter((t) => !t[4] || data.settings[t[4]])
@@ -51,6 +51,7 @@ export default function App() {
     }
   }, [session, locked, data])
 
+  if (!ready) return <div className="auth"><Logo className="logo-lg" /></div>
   if (!session) return <><div className="ambient" /><Login /></>
   if (locked) return <><div className="ambient" /><PinLock /></>
 
@@ -76,6 +77,7 @@ export default function App() {
           <div className="page" style={{ paddingBottom: 0, paddingTop: 'calc(var(--safe-t) + 10px)' }}>
             <InstallBanner style={{ marginBottom: 0 }} />
             <NotifyBanner />
+            <BackupBanner />
           </div>
           {(sync === 'auth' || sync === 'error') && (
             <div className="page" style={{ paddingBottom: 0 }}>

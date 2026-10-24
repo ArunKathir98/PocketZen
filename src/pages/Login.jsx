@@ -12,7 +12,7 @@ const FEATURES = [
 ]
 
 export default function Login() {
-  const { login, loggingIn, error } = useApp()
+  const { login, loginLocal, loggingIn, error } = useApp()
   return (
     <div className="auth">
       <div className="auth-card wide">
@@ -39,6 +39,13 @@ export default function Login() {
           <button className="g-btn" onClick={login} disabled={loggingIn || !hasClientId()}>
             <GoogleG /> {loggingIn ? 'Signing in…' : 'Continue with Google'}
           </button>
+          <div className="or"><span>or</span></div>
+          <button className="btn ghost block" onClick={loginLocal} disabled={loggingIn}>
+            Continue without an account
+          </button>
+          <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>
+            Your data stays on this device only. Use <b>Back up</b> in Profile to keep a copy, and connect Google Drive any time later.
+          </p>
           {!hasClientId() && (
             <p className="err">Setup needed: add VITE_GOOGLE_CLIENT_ID to your .env file (see README).</p>
           )}

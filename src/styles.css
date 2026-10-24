@@ -326,3 +326,8 @@ button.item:hover { background: var(--surface-2); }
 
 a.setting { color: inherit; text-decoration: none; }
 a.setting:hover, button.setting:hover { background: var(--surface-2); }
+
+.dlg-actions.many { flex-direction: column-reverse !important; }
+.or { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.sync.st-local i { background: var(--g3); }

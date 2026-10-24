@@ -139,17 +139,21 @@ export default function User() {
               {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
-          <div className="setting">
-            <span className="si"><BellRing size={19} /></span>
-            <span className="main">
-              <div className="t">Daily expense reminder</div>
-              <div className="s">{notificationsSupported() ? 'Nudge me to log today’s spending' : 'Notifications unsupported — in-app only'}</div>
-            </span>
-            {s.dailyReminder && <input type="time" className="input" style={{ width: 'auto', padding: '8px 10px' }} value={s.dailyReminderTime} onChange={(e) => setSettings({ dailyReminderTime: e.target.value })} aria-label="Reminder time" />}
-            <Toggle on={s.dailyReminder} onChange={toggleDaily} label="Daily expense reminder" />
-          </div>
+          {!isLocal && (
+            <div className="setting">
+              <span className="si"><BellRing size={19} /></span>
+              <span className="main">
+                <div className="t">Daily expense reminder</div>
+                <div className="s">{notificationsSupported() ? 'Nudge me to log today’s spending' : 'Notifications unsupported — in-app only'}</div>
+              </span>
+              {s.dailyReminder && <input type="time" className="input" style={{ width: 'auto', padding: '8px 10px' }} value={s.dailyReminderTime} onChange={(e) => setSettings({ dailyReminderTime: e.target.value })} aria-label="Reminder time" />}
+              <Toggle on={s.dailyReminder} onChange={toggleDaily} label="Daily expense reminder" />
+            </div>
+          )}
         </div>
 
+        {!isLocal && (
+          <>
         <div className="section-title">Notifications</div>
         <NotificationsCard onMessage={setMsg} />
 
@@ -171,6 +175,8 @@ export default function User() {
             <Toggle on={!!s.showReminders} onChange={(v) => { setSettings({ showReminders: v }); if (v) askNotificationPermission() }} label="Bill reminders page" />
           </div>
         </div>
+          </>
+        )}
 
         <div className="section-title">Security</div>
         <div className="card list">

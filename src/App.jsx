@@ -27,19 +27,22 @@ const TABS = [
   ['user', 'Profile', CircleUserRound, User],
 ]
 
+// Without a Google account the app is a simple tracker: only these pages are available.
+const LITE_TABS = new Set(['records', 'categories', 'accounts', 'user'])
+
 const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
 
 export default function App() {
   const { session, ready, locked, data, sync, reconnect, isLocal } = useApp()
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
-  const tabs = TABS.filter((t) => !t[4] || data.settings[t[4]])
+  const tabs = TABS.filter((t) => (isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]]))
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
 
   // In-app scheduler for bill reminders and the daily nudge.
   useEffect(() => {
-    if (!session || locked) return
+    if (!session || locked || isLocal) return // reminders are a Google-account feature
     const run = () => {
       const msgs = checkDue(data)
       if (msgs.length) setToasts((t) => [...t, ...msgs])
@@ -52,7 +55,7 @@ export default function App() {
       clearInterval(id)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [session, locked, data])
+  }, [session, locked, isLocal, data])
 
   if (!ready) return <div className="auth"><Logo className="logo-lg" /></div>
   if (!session) return <><div className="ambient" /><Login /></>

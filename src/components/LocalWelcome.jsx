@@ -29,7 +29,7 @@ export default function LocalWelcome() {
   return (
     <Modal title="Welcome to PocketZen 👋" onClose={close} footer={<button className="btn primary block" onClick={close}>Got it, let's start</button>}>
       <div className="stack">
-        <p className="muted" style={{ fontSize: 13 }}>You're using PocketZen without an account. A few quick things to keep your data safe:</p>
+        <p className="muted" style={{ fontSize: 13 }}>You're using the simple version of PocketZen (Records, Categories and Accounts). A few quick things to keep your data safe:</p>
         <Step icon={Smartphone} title="Your data lives on this device">
           No one else can see it, but it's gone if you clear browser data or uninstall.
         </Step>
@@ -44,7 +44,7 @@ export default function LocalWelcome() {
           Profile → <b>Back up now</b> saves a file (optionally password-protected). We'll remind you every couple of weeks.
         </Step>
         <Step icon={Cloud} title="Change your mind anytime">
-          Profile → <b>Connect Google Drive</b> moves everything to your own Drive and syncs across devices.
+          Profile → <b>Connect Google Drive</b> moves everything to your own Drive, syncs across devices and unlocks budgets, EMIs, loans, reminders and groups.
         </Step>
       </div>
     </Modal>

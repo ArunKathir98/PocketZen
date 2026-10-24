@@ -118,7 +118,7 @@ export default function CloudCard({ onMessage }) {
         </button>
         <button className="setting" onClick={connect} disabled={busy}>
           <span className="si"><Cloud size={19} /></span>
-          <span className="main"><div className="t">{busy ? 'Connecting…' : 'Connect Google Drive'}</div><div className="s">Sync across devices and keep a cloud copy</div></span>
+          <span className="main"><div className="t">{busy ? 'Connecting…' : 'Connect Google Drive'}</div><div className="s">Unlock budgets, EMIs, loans, reminders &amp; groups, plus cloud sync</div></span>
         </button>
       </div>
       {backup && <BackupModal onClose={() => setBackup(false)} onDone={onMessage} />}

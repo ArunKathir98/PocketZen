@@ -44,7 +44,7 @@ export default function Login() {
             Continue without an account
           </button>
           <p className="fine" style={{ textAlign: 'center', marginTop: 8 }}>
-            Your data stays on this device only. Use <b>Back up</b> in Profile to keep a copy, and connect Google Drive any time later.
+            A simple version: Records, Categories and Accounts, with data kept on this device only. Sign in with Google for budgets, EMIs, loans, reminders and group expenses.
           </p>
           {!hasClientId() && (
             <p className="err">Setup needed: add VITE_GOOGLE_CLIENT_ID to your .env file (see README).</p>

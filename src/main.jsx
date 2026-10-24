@@ -6,6 +6,9 @@ import { DialogProvider } from './components/dialog'
 import App from './App'
 import './styles.css'
 import './lib/install'
+import { capturePendingJoin } from './lib/pendingJoin'
+
+capturePendingJoin() // invite links look like /?join=ABCDEFGHJKMN
 import { unlockAudio } from './lib/notify'
 
 // first tap unlocks audio so reminder chimes can play later

@@ -53,6 +53,7 @@ export const defaultSettings = () => ({
   showEmi: false,
   showReminders: false,
   showLoans: false,
+  showGroups: false,
   notifySound: true,
 })
 
@@ -67,6 +68,7 @@ export const emptyData = () => ({
   emis: [],
   people: [],
   loans: [],
+  groups: [], // shared groups I belong to: { id, name, me (my member id), joinedAt }
   settings: defaultSettings(),
   pin: null, // { salt, hash }
 })

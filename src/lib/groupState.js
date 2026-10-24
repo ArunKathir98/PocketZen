@@ -157,3 +157,10 @@ export function suggestSettlements(balances) {
 
 export const groupTotal = (group, eventId) =>
   live(group, 'expenses').filter((e) => !eventId || e.eventId === eventId).reduce((s, e) => s + toMinor(e.amount), 0)
+
+/** Format a minor-unit amount in the group's currency. */
+export const groupMoney = (currency) => {
+  let nf
+  try { nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'INR' }) } catch { nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'INR' }) }
+  return (minor) => (minor < 0 ? '−' : '') + nf.format(Math.abs(minor) / 100)
+}

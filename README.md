@@ -30,6 +30,19 @@ npm run preview    # test the installable PWA build
 Deploy `dist/` to any static host over HTTPS (Vercel, Netlify, GitHub Pages, Cloudflare Pages) and add that origin in step 4.
 Then open it on your phone and use **Add to Home Screen / Install app**.
 
+## Shared groups (split expenses)
+
+Groups are the one feature that needs a server, because several people edit the same data. `worker/index.js` is a
+Cloudflare Worker that serves the app and the `/api/groups` API; each group is a **Durable Object** (SQLite-backed,
+works on the free plan). `wrangler.jsonc` declares it, so `npx wrangler deploy` (what Cloudflare's Git build runs)
+creates everything. No dashboard setup.
+
+- A group is addressed by a random 12-character ID; anyone with the ID can view and edit it. Idle groups are erased after 12 months.
+- Edits are small "set entity" operations resolved last-write-wins per entity; clients poll every ~6 s while visible and queue edits offline.
+- Group logic shared by the app and the Worker: `src/lib/groupState.js` (splits, balances, settle-up suggestions).
+- `npm run dev` has no `/api`. To try groups locally: `npm run build && npx wrangler dev`.
+- Groups, budgets, EMIs, loans and reminders need a Google account; the no-account mode is Records, Categories and Accounts.
+
 ## Notes & limits
 
 - **Stay signed in**: the session is kept in local storage and never expires; only *Log out* ends it. Google access

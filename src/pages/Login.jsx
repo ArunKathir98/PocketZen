@@ -3,6 +3,7 @@ import { useApp } from '../lib/store'
 import { hasClientId } from '../lib/google'
 import { GoogleG, Logo } from '../components/ui'
 import { InstallBanner } from '../components/Banners'
+import { getPendingJoin } from '../lib/pendingJoin'
 
 const FEATURES = [
   [PiggyBank, 'Track income, expenses & transfers'],
@@ -27,6 +28,7 @@ export default function Login() {
         </div>
         <div className="stack">
         <InstallBanner />
+        {getPendingJoin() && <div className="banner install" role="status">You've been invited to a group. Sign in with Google to join it.</div>}
         <div className="card pad" style={{ padding: 24 }}>
           <ul className="feat">
             {FEATURES.map(([Icon, text]) => (

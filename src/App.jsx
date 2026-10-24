@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { CircleUserRound, Handshake, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { CircleUserRound, Handshake, HandCoins, Users, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
+import { getPendingJoin } from './lib/pendingJoin'
+import { useDialog } from './components/dialog'
 import { Logo } from './components/ui'
 import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
 import LocalWelcome from './components/LocalWelcome'
@@ -14,6 +16,7 @@ import Budget from './pages/Budget'
 import Reminders from './pages/Reminders'
 import Emi from './pages/Emi'
 import Loans from './pages/Loans'
+import Groups from './pages/Groups'
 import User from './pages/User'
 
 const TABS = [
@@ -22,6 +25,7 @@ const TABS = [
   ['accounts', 'Accounts', Landmark, Accounts],
   ['budget', 'Budget', PiggyBank, Budget],
   ['emi', 'EMIs', HandCoins, Emi, 'showEmi'],
+  ['groups', 'Groups', Users, Groups, 'showGroups'],
   ['loans', 'Loans', Handshake, Loans, 'showLoans'],
   ['reminders', 'Reminders', BellRing, Reminders, 'showReminders'],
   ['user', 'Profile', CircleUserRound, User],
@@ -33,12 +37,28 @@ const LITE_TABS = new Set(['records', 'categories', 'accounts', 'user'])
 const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
 
 export default function App() {
-  const { session, ready, locked, data, sync, reconnect, isLocal } = useApp()
+  const { session, ready, locked, data, sync, reconnect, isLocal, setSettings } = useApp()
+  const { alert } = useDialog()
+  const warnedJoin = useRef(false)
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
   const tabs = TABS.filter((t) => (isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]]))
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
+
+  // Opened from an invite link: go straight to Groups (a Google account is needed for groups).
+  useEffect(() => {
+    if (!session || !ready || locked || !getPendingJoin()) return
+    if (isLocal) {
+      if (!warnedJoin.current) {
+        warnedJoin.current = true
+        alert({ title: 'Sign in to join', message: 'Group expenses need a Google account. Connect Google in Profile → Backup & sync, then open the invite link again.' })
+      }
+      return
+    }
+    if (!data.settings.showGroups) setSettings({ showGroups: true })
+    setTab('groups')
+  }, [session, ready, locked, isLocal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // In-app scheduler for bill reminders and the daily nudge.
   useEffect(() => {

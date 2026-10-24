@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { BellRing, CalendarClock, DatabaseBackup, HandCoins, Handshake, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
+import { BellRing, CalendarClock, DatabaseBackup, HandCoins, Handshake, Users, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { CURRENCIES } from '../lib/defaults'
 import { hashPin, hashRecovery, makeRecoveryCode, verifyPin } from '../lib/pin'
@@ -168,6 +168,11 @@ export default function User() {
             <span className="si"><Handshake size={19} /></span>
             <span className="main"><div className="t">Loans &amp; people</div><div className="s">Money lent or borrowed, with optional interest</div></span>
             <Toggle on={!!s.showLoans} onChange={(v) => { setSettings({ showLoans: v }); if (v) askNotificationPermission() }} label="Loans and people page" />
+          </div>
+          <div className="setting">
+            <span className="si"><Users size={19} /></span>
+            <span className="main"><div className="t">Group expenses</div><div className="s">Split bills with friends in shared groups</div></span>
+            <Toggle on={!!s.showGroups} onChange={(v) => setSettings({ showGroups: v })} label="Group expenses page" />
           </div>
           <div className="setting">
             <span className="si"><CalendarClock size={19} /></span>

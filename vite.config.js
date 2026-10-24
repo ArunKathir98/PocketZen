@@ -29,7 +29,7 @@ export default defineConfig({
         importScripts: ['sw-notify.js'],
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/privacy\.html$/, /^\/home\.html$/],
+        navigateFallbackDenylist: [/^\/privacy\.html$/, /^\/home\.html$/, /^\/api\//],
       },
     }),
   ],

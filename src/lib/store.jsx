@@ -23,7 +23,7 @@ const readJson = (k) => {
 const normalize = (d) => {
   const base = emptyData()
   const out = { ...base, ...d, settings: { ...base.settings, ...(d?.settings || {}) } }
-  for (const k of ['accounts', 'categories', 'transactions', 'budgets', 'reminders', 'emis', 'people', 'loans']) if (!Array.isArray(out[k])) out[k] = base[k]
+  for (const k of ['accounts', 'categories', 'transactions', 'budgets', 'reminders', 'emis', 'people', 'loans', 'groups']) if (!Array.isArray(out[k])) out[k] = base[k]
   return out
 }
 

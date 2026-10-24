@@ -68,6 +68,9 @@ export function mergeData(base, inc) {
       .map((l) => ({ ...l, personId: pMap.get(l.personId) ?? l.personId, events: (l.events || []).map((e) => ({ ...e, accountId: ra(e.accountId) })) })),
   ]
 
+  const groupIds = seen(base.groups || [])
+  const groups = [...(base.groups || []), ...(inc.groups || []).filter((g) => !groupIds.has(g.id))]
+
   const remIds = seen(base.reminders)
   const reminders = [...base.reminders, ...(inc.reminders || []).filter((r) => !remIds.has(r.id))]
 
@@ -80,12 +83,14 @@ export function mergeData(base, inc) {
     emis,
     people,
     loans,
+    groups,
     reminders,
     settings: {
       ...base.settings,
       showEmi: !!(base.settings?.showEmi || inc.settings?.showEmi),
       showReminders: !!(base.settings?.showReminders || inc.settings?.showReminders),
       showLoans: !!(base.settings?.showLoans || inc.settings?.showLoans),
+      showGroups: !!(base.settings?.showGroups || inc.settings?.showGroups),
     },
     pin: base.pin || inc.pin || null,
   }
@@ -93,4 +98,4 @@ export function mergeData(base, inc) {
 
 /** True when a dataset holds anything the user actually entered. */
 export const hasUserData = (d) =>
-  !!d && ((d.transactions?.length || 0) + (d.budgets?.length || 0) + (d.emis?.length || 0) + (d.reminders?.length || 0) + (d.loans?.length || 0) > 0)
+  !!d && ((d.transactions?.length || 0) + (d.budgets?.length || 0) + (d.emis?.length || 0) + (d.reminders?.length || 0) + (d.loans?.length || 0) + (d.groups?.length || 0) > 0)

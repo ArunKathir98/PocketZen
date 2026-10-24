@@ -336,3 +336,7 @@ a.setting:hover, button.setting:hover { background: var(--surface-2); }
 body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 input, textarea, select, [contenteditable='true'], .selectable { -webkit-user-select: text; user-select: text; }
 img, svg { -webkit-user-drag: none; user-drag: none; }
+
+/* settle-up checkbox rows */
+.item.check { cursor: pointer; }
+.item.check input[type='checkbox'] { width: 22px; height: 22px; flex: none; accent-color: #03a7c3; cursor: pointer; }

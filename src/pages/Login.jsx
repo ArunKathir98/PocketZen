@@ -7,8 +7,8 @@ import { getPendingJoin } from '../lib/pendingJoin'
 
 const FEATURES = [
   [PiggyBank, 'Track income, expenses & transfers'],
-  [CloudCog, 'Budgets by category, accounts & bills'],
-  [CalendarClock, 'Recurring bill reminders'],
+  [CloudCog, 'Budgets, EMIs, loans & group expenses'],
+  [CalendarClock, 'Bill reminders with sound & vibration'],
   [ShieldCheck, 'Stored in your own Google Drive — never on our servers'],
 ]
 
@@ -28,7 +28,7 @@ export default function Login() {
         </div>
         <div className="stack">
         <InstallBanner />
-        {getPendingJoin() && <div className="banner install" role="status">You've been invited to a group. Sign in with Google to join it.</div>}
+        {getPendingJoin() && <div className="banner install" role="status">Sign in with Google to save the group you were sent to your list.</div>}
         <div className="card pad" style={{ padding: 24 }}>
           <ul className="feat">
             {FEATURES.map(([Icon, text]) => (

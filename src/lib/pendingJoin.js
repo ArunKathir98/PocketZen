@@ -1,9 +1,10 @@
-// An invite link looks like  https://<app>/?join=ABCDEFGHJKMN . We remember the ID until the person is signed in.
+// A group link looks like  https://<app>/?view=<group id> . We remember the id until the person is done with it.
 const KEY = 'pz:pendingJoin'
 
 export function capturePendingJoin() {
   try {
-    const p = new URLSearchParams(window.location.search).get('join')
+    const q = new URLSearchParams(window.location.search)
+    const p = q.get('view') || q.get('join')
     if (p) {
       localStorage.setItem(KEY, p)
       window.history.replaceState(null, '', window.location.pathname)

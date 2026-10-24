@@ -2,11 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-const api = { '/api': 'http://localhost:8787' } // the local Worker: `npm run worker`
-
 export default defineConfig({
-  server: { proxy: api },
-  preview: { proxy: api },
   plugins: [
     react(),
     VitePWA({
@@ -33,7 +29,7 @@ export default defineConfig({
         importScripts: ['sw-notify.js'],
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/privacy\.html$/, /^\/home\.html$/, /^\/api\//],
+        navigateFallbackDenylist: [/^\/privacy\.html$/, /^\/home\.html$/],
       },
     }),
   ],

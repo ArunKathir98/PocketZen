@@ -1,31 +1,26 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserPlus } from 'lucide-react'
+import { Eye, Plus, UserPlus } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { CURRENCIES } from '../lib/defaults'
 import { uid } from '../lib/util'
 import { idbGet, idbSet } from '../lib/idb'
 import { cacheKey } from '../lib/useGroup'
-import { formatGroupId, groupMoney, groupTotal, isGroupId, live, normalizeGroupId, members as listMembers } from '../lib/groupState'
+import { applyOps, emptyGroup, groupMoney, groupTotal, isGroupId, live, members as listMembers, parseGroupRef } from '../lib/groupState'
 import { clearPendingJoin, getPendingJoin } from '../lib/pendingJoin'
-import * as api from '../lib/api'
+import * as google from '../lib/google'
 import { Empty, Modal } from '../components/ui'
 import GroupView from './GroupView'
 
 const colors = ['#14b8a6', '#06b6d4', '#6366f1', '#a855f7', '#ec4899', '#f97316', '#22c55e', '#3b82f6']
 const colorOf = (s) => colors[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length]
 
-const friendlyError = (e) =>
-  e.code === 'no_server' ? "The groups server isn't reachable. If you're running locally, start it with `npm run worker` in another terminal."
-    : e.code === 'offline' ? 'You seem to be offline. Groups need an internet connection.'
-    : e.code === 'not_found' ? 'No group found with that ID. Check it and try again.'
-    : e.code === 'bad_id' ? "That doesn't look like a group ID (12 letters and numbers)."
-    : 'Groups could not be reached right now. Please try again in a moment.'
-
-/** Accepts a bare ID, a dashed ID or a full invite link. */
-export const parseGroupInput = (text) => {
-  const m = String(text || '').match(/[?&]join=([A-Za-z0-9-]+)/)
-  return normalizeGroupId(m ? m[1] : text)
-}
+export const friendlyGroupError = (e) =>
+  /popup_closed|access_denied/.test(e?.message || '') ? 'The Google permission request was cancelled.'
+    : e?.code === 'no_key' ? 'Viewing group links needs the app\'s Google API key (VITE_GOOGLE_API_KEY). See the README.'
+    : e?.code === 'offline' || !navigator.onLine ? 'You seem to be offline.'
+    : e?.code === 'not_found' || e?.status === 404 ? 'No group found. The link may be wrong, or the admin turned sharing off or deleted it.'
+    : e?.status === 403 ? 'Google did not allow that. Make sure you granted the Drive permission when asked.'
+    : 'Something went wrong. Please try again in a moment.'
 
 function GroupCard({ entry, onOpen }) {
   const [state, setState] = useState(null)
@@ -36,20 +31,25 @@ function GroupCard({ entry, onOpen }) {
       <span className="ico" style={{ background: `${colorOf(entry.name)}26`, color: colorOf(entry.name), fontWeight: 800 }}>{entry.name[0]?.toUpperCase()}</span>
       <span className="main">
         <div className="t">{entry.name}</div>
-        <div className="s">{state ? `${listMembers(state).length} people · ${live(state, 'expenses').length} expenses` : 'Tap to open'} · {formatGroupId(entry.id)}</div>
+        <div className="s">{entry.role === 'admin' ? 'You manage this group' : 'View only'}{state ? ` · ${listMembers(state).length} people · ${live(state, 'expenses').length} expenses` : ''}</div>
       </span>
+      {entry.role !== 'admin' && <Eye size={15} color="var(--muted)" />}
       {state && <span className="amt num">{money(groupTotal(state))}</span>}
     </button>
   )
 }
 
 export default function Groups() {
-  const { data } = useApp()
+  const { data, remove } = useApp()
   const [openId, setOpenId] = useState(null)
   const [create, setCreate] = useState(false)
-  const [join, setJoin] = useState(() => (getPendingJoin() ? parseGroupInput(getPendingJoin()) : null)) // null = closed, '' = manual entry
+  const [join, setJoin] = useState(() => (getPendingJoin() ? parseGroupRef(getPendingJoin()) : null)) // null = closed, '' = manual entry
 
-  const open = data.groups.find((g) => g.id === openId)
+  // groups saved by the earlier server-based version no longer exist: clean them out
+  useEffect(() => { data.groups.filter((g) => !g.role).forEach((g) => remove('groups', g.id)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const groups = data.groups.filter((g) => g.role)
+  const open = groups.find((g) => g.id === openId)
   if (open) return <GroupView entry={open} onBack={() => setOpenId(null)} />
 
   return (
@@ -61,11 +61,11 @@ export default function Groups() {
           <button className="btn primary" onClick={() => setCreate(true)}><Plus size={18} /> New</button>
         </div>
       </div>
-      {data.groups.length === 0 ? (
-        <Empty emoji="🧾" title="No groups yet" text="Create a group for a trip, flat or event, then invite friends with its ID. Everyone can add expenses, and PocketZen works out who pays whom."
-          action={<div className="row" style={{ justifyContent: 'center', gap: 8 }}><button className="btn primary" onClick={() => setCreate(true)}>Create a group</button><button className="btn ghost" onClick={() => setJoin('')}>Join with an ID</button></div>} />
+      {groups.length === 0 ? (
+        <Empty emoji="🧾" title="No groups yet" text="Create a group for a trip, flat or event and add the expenses. Friends open your link to see who owes what. They can view, and you stay in control."
+          action={<div className="row" style={{ justifyContent: 'center', gap: 8 }}><button className="btn primary" onClick={() => setCreate(true)}>Create a group</button><button className="btn ghost" onClick={() => setJoin('')}>Join with a link</button></div>} />
       ) : (
-        <div className="card list">{data.groups.map((g) => <GroupCard key={g.id} entry={g} onOpen={() => setOpenId(g.id)} />)}</div>
+        <div className="card list">{groups.map((g) => <GroupCard key={g.id} entry={g} onOpen={() => setOpenId(g.id)} />)}</div>
       )}
       {create && <CreateGroup onClose={() => setCreate(false)} onCreated={(id) => { setCreate(false); setOpenId(id) }} />}
       {join !== null && <JoinGroup initial={join} onClose={() => { setJoin(null); clearPendingJoin() }} onJoined={(id) => { setJoin(null); clearPendingJoin(); setOpenId(id) }} />}
@@ -85,14 +85,17 @@ function CreateGroup({ onClose, onCreated }) {
     setErr('')
     setBusy(true)
     try {
-      const { state } = await api.createGroup(name.trim(), currency)
+      await google.enableGroupScope(session.email) // first thing in the click: may open Google's permission popup
       const memberId = uid()
-      const r = await api.postOps(state.id, [{ t: 'set', c: 'members', id: memberId, v: { name: me.trim(), email: session?.email || '', u: Date.now() } }])
-      await idbSet(cacheKey(state.id), r.state)
-      add('groups', { id: state.id, name: state.name, me: memberId, joinedAt: Date.now() })
-      onCreated(state.id)
+      const draft = applyOps(emptyGroup('pending', name.trim(), currency, Date.now()), [{ t: 'set', c: 'members', id: memberId, v: { name: me.trim(), email: session.email || '', u: Date.now() } }]).state
+      const id = await google.createGroupFile(draft.name, draft, session.email)
+      const state = { ...draft, id }
+      await google.writeGroupFile(id, state, session.email) // store the real id inside the file
+      await idbSet(cacheKey(id), state)
+      add('groups', { id, name: state.name, role: 'admin', me: memberId, joinedAt: Date.now() })
+      onCreated(id)
     } catch (e) {
-      setErr(friendlyError(e))
+      setErr(friendlyGroupError(e))
       setBusy(false)
     }
   }
@@ -105,34 +108,33 @@ function CreateGroup({ onClose, onCreated }) {
         <div className="field"><label htmlFor="gm">Your name in this group</label><input id="gm" className="input" value={me} onChange={(e) => setMe(e.target.value)} placeholder="e.g. Arun" /></div>
         <div className="field"><label htmlFor="gc">Currency</label>
           <select id="gc" className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select></div>
-        <p className="muted" style={{ fontSize: 12.5 }}>You'll get a group ID to share. Anyone with it can view and add expenses, with the same rights as you.</p>
+        <p className="muted" style={{ fontSize: 12.5 }}>
+          The group is saved as a file in <b>your</b> Google Drive. Anyone you send the link to can <b>view</b> it; only you can make changes. Google will ask once for permission to create that file.
+        </p>
       </div>
     </Modal>
   )
 }
 
 function JoinGroup({ initial, onClose, onJoined }) {
-  const { data, session, add } = useApp()
-  const [text, setText] = useState(initial ? formatGroupId(initial) : '')
+  const { data, add } = useApp()
+  const [text, setText] = useState(initial || '')
   const [found, setFound] = useState(null)
-  const [pick, setPick] = useState('') // member id, or 'new'
-  const [name, setName] = useState(session?.mode === 'google' ? session.name || '' : '')
+  const [pick, setPick] = useState('') // my member id, or '' = just viewing
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
   const find = async (value = text) => {
     setErr('')
-    const id = parseGroupInput(value)
-    if (!isGroupId(id)) return setErr("That doesn't look like a group ID (12 letters and numbers).")
-    const existing = data.groups.find((g) => g.id === id)
-    if (existing) return onJoined(id)
+    const id = parseGroupRef(value)
+    if (!isGroupId(id)) return setErr("That doesn't look like a group link or ID.")
+    if (data.groups.some((g) => g.id === id && g.role)) return onJoined(id)
     setBusy(true)
     try {
-      const { state } = await api.getGroup(id)
-      setFound(state)
-      setPick(listMembers(state).length ? '' : 'new')
+      const state = await google.readPublicGroupFile(id)
+      setFound({ ...state, id })
     } catch (e) {
-      setErr(friendlyError(e))
+      setErr(friendlyGroupError(e))
     } finally {
       setBusy(false)
     }
@@ -141,23 +143,9 @@ function JoinGroup({ initial, onClose, onJoined }) {
   useEffect(() => { if (initial) find(initial) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const join = async () => {
-    setErr('')
-    setBusy(true)
-    try {
-      let state = found
-      let me = pick
-      if (pick === 'new') {
-        me = uid()
-        const r = await api.postOps(found.id, [{ t: 'set', c: 'members', id: me, v: { name: name.trim(), email: session?.email || '', u: Date.now() } }])
-        state = r.state
-      }
-      await idbSet(cacheKey(state.id), state)
-      add('groups', { id: state.id, name: state.name, me, joinedAt: Date.now() })
-      onJoined(state.id)
-    } catch (e) {
-      setErr(friendlyError(e))
-      setBusy(false)
-    }
+    await idbSet(cacheKey(found.id), found)
+    add('groups', { id: found.id, name: found.name, role: 'viewer', me: pick, joinedAt: Date.now() })
+    onJoined(found.id)
   }
 
   return (
@@ -167,23 +155,22 @@ function JoinGroup({ initial, onClose, onJoined }) {
           {err && <p className="err" role="alert" style={{ margin: 0 }}>{err}</p>}
           {!found
             ? <button className="btn primary block" disabled={!text.trim() || busy} onClick={() => find()}>{busy ? 'Looking…' : 'Find group'}</button>
-            : <button className="btn primary block" disabled={busy || !pick || (pick === 'new' && !name.trim())} onClick={join}>{busy ? 'Joining…' : `Join ${found.name}`}</button>}
+            : <button className="btn primary block" onClick={join}>Save {found.name}</button>}
         </div>
       }>
       <div className="stack">
         {!found ? (
-          <div className="field"><label htmlFor="jid">Group ID or invite link</label>
-            <input id="jid" className="input num" autoFocus placeholder="XXXX-XXXX-XXXX" value={text} autoCapitalize="characters" autoComplete="off" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && find()} /></div>
+          <div className="field"><label htmlFor="jid">Group link or ID</label>
+            <input id="jid" className="input" autoFocus placeholder="Paste the link you were sent" value={text} autoComplete="off" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && find()} /></div>
         ) : (
           <>
-            <div className="note-box">Group: <b>{found.name}</b> · {listMembers(found).length} people</div>
-            <div className="field"><label>Which one are you?</label>
+            <div className="note-box">Group: <b>{found.name}</b> · {listMembers(found).length} people · view only</div>
+            <div className="field"><label>Which one are you? (optional, to show your balance)</label>
               <div className="chips">
+                <button type="button" className={`chip ${pick === '' ? 'on' : ''}`} onClick={() => setPick('')}>Just viewing</button>
                 {listMembers(found).map((m) => <button key={m.id} type="button" className={`chip ${pick === m.id ? 'on' : ''}`} onClick={() => setPick(m.id)}>{m.name}</button>)}
-                <button type="button" className={`chip ${pick === 'new' ? 'on' : ''}`} onClick={() => setPick('new')}>I'm not listed</button>
               </div>
             </div>
-            {pick === 'new' && <div className="field"><label htmlFor="jn">Your name</label><input id="jn" className="input" autoFocus value={name} onChange={(e) => setName(e.target.value)} /></div>}
           </>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { addDays, parseDate, toDateStr } from './util'
+import { addDays, toDateStr } from './util'
 import { fireReminder, notificationsSupported } from './notify'
 import { hasMonthlyCycle, loanLabel, loanStats } from './loans'
 
@@ -128,4 +128,3 @@ export function checkDue(data, now = new Date()) {
   return messages
 }
 
-export { parseDate }

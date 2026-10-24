@@ -10,7 +10,6 @@
 // last-write-wins per entity, so two people editing at once never overwrite each other's other changes.
 
 export const LIMITS = { members: 60, events: 50, expenses: 3000, payments: 3000, entityBytes: 2000, stateBytes: 1_000_000 }
-export const GROUP_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export const COLLECTIONS = ['members', 'events', 'expenses', 'payments']
 
 const str = (v, max) => String(v ?? '').slice(0, max)
@@ -18,9 +17,14 @@ const idOk = (v) => typeof v === 'string' && /^[\w-]{1,40}$/.test(v)
 const amountOk = (n) => Number.isFinite(n) && n >= 0 && n <= 1e9
 const dateOk = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
-export const normalizeGroupId = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-export const isGroupId = (s) => new RegExp(`^[${GROUP_ID_ALPHABET}]{12}$`).test(normalizeGroupId(s))
-export const formatGroupId = (s) => normalizeGroupId(s).replace(/(.{4})(?=.)/g, '$1-')
+/** A group id is the Drive file id. Accepts a bare id, an invite link (?view= / ?join=) or a Drive /d/<id> URL. */
+export const parseGroupRef = (text) => {
+  const t = String(text || '').trim()
+  const m = t.match(/[?&](?:view|join)=([\w-]+)/) || t.match(/\/d\/([\w-]+)/)
+  return (m ? m[1] : t).replace(/[^\w-]/g, '')
+}
+export const isGroupId = (s) => /^[\w-]{20,80}$/.test(s || '')
+export const formatGroupId = (s) => String(s || '')
 
 export const emptyGroup = (id, name, currency, now) => ({
   id, name: str(name, 80) || 'Group', currency: str(currency, 6) || 'INR', createdAt: now, updatedAt: now, version: 1,
@@ -95,7 +99,6 @@ export const live = (group, coll) => Object.values(group?.[coll] || {}).filter((
 export const members = (group) => live(group, 'members').sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
 export const memberName = (group, id) => group?.members?.[id]?.name || 'Someone'
 export const toMinor = (n) => Math.round((Number(n) + Number.EPSILON) * 100)
-export const fromMinor = (n) => n / 100
 
 /** Splits `totalMinor` equally; leftover cents go to the first people so the parts add up exactly. */
 export function splitEqual(totalMinor, ids) {

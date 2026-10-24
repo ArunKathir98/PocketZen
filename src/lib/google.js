@@ -1,8 +1,16 @@
-// Google Identity Services (token model) + Drive appDataFolder.
-// Data lives in the user's own hidden Drive "app data" folder, visible only to this app.
+// Google Identity Services (token model) + Drive.
+// Personal data lives in the user's own hidden Drive "app data" folder, visible only to this app.
+// Shared groups are ordinary files PocketZen creates in the admin's Drive (drive.file scope), readable by
+// anyone with the link; only the admin's signed-in app can change them.
 
-export const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY // lets people with a group link read it without signing in
 const BASE_SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.appdata'
+const FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const GROUP_FLAG = 'pz:groupScope'
+
+/** Only people who create groups are asked for the extra Drive permission. */
+const scopes = () => (localStorage.getItem(GROUP_FLAG) === '1' ? `${BASE_SCOPES} ${FILE_SCOPE}` : BASE_SCOPES)
 const FILE_NAME = 'pocketzen-data.json'
 
 let token = null
@@ -23,8 +31,9 @@ function waitForGis(timeout = 10000) {
 }
 
 /** Ask Google for an access token. prompt '' = silent when possible, 'consent' / 'select_account' = UI. */
-export async function requestToken({ prompt = '', hint, scope = BASE_SCOPES } = {}) {
+export async function requestToken({ prompt = '', hint, scope } = {}) {
   const oauth2 = await waitForGis()
+  scope = scope || scopes()
   return new Promise((resolve, reject) => {
     const client = oauth2.initTokenClient({
       client_id: CLIENT_ID,
@@ -43,9 +52,9 @@ export async function requestToken({ prompt = '', hint, scope = BASE_SCOPES } = 
   })
 }
 
-export const hasLiveToken = () => !!token && Date.now() < expiresAt - 60000
+const hasLiveToken = () => !!token && Date.now() < expiresAt - 60000
 
-export async function ensureToken(hint) {
+async function ensureToken(hint) {
   if (hasLiveToken()) return token
   return requestToken({ prompt: '', hint })
 }
@@ -153,4 +162,80 @@ export async function reverifyAccount(expectedSub, hint) {
   await requestToken({ prompt: 'select_account', hint })
   const p = await fetchProfile(hint)
   return p.sub === expectedSub
+}
+
+// ---------- Shared groups (files in the admin's Drive) ----------
+export const hasGroupScope = () => localStorage.getItem(GROUP_FLAG) === '1'
+const hasApiKey = () => !!API_KEY && !API_KEY.startsWith('your-')
+
+/** Ask for the extra Drive permission. Call straight from a click (it may open Google's consent popup). */
+export async function enableGroupScope(hint) {
+  const had = localStorage.getItem(GROUP_FLAG)
+  localStorage.setItem(GROUP_FLAG, '1')
+  try {
+    return await requestToken({ prompt: '', hint })
+  } catch (e) {
+    if (!had) localStorage.removeItem(GROUP_FLAG)
+    throw e
+  }
+}
+
+const multipart = (meta, body) => {
+  const boundary = 'pz' + Math.random().toString(36).slice(2)
+  return {
+    boundary,
+    body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`,
+  }
+}
+
+/** Creates the group's file in the admin's Drive and lets anyone with the link read it. Returns the file id. */
+export async function createGroupFile(name, state, hint) {
+  const m = multipart({ name: `PocketZen group - ${name}.json`, mimeType: 'application/json' }, JSON.stringify(state))
+  const res = await api(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${m.boundary}` }, body: m.body },
+    hint,
+  )
+  const { id } = await res.json()
+  await api(
+    `https://www.googleapis.com/drive/v3/files/${id}/permissions`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone', allowFileDiscovery: false }) },
+    hint,
+  )
+  return id
+}
+
+/** Admin read/write (signed in). */
+export async function readGroupFile(id, hint) {
+  const res = await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {}, hint)
+  return res.json()
+}
+export async function writeGroupFile(id, state, hint) {
+  await api(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) }, hint)
+}
+export async function deleteGroupFile(id, hint) {
+  await api(`https://www.googleapis.com/drive/v3/files/${id}`, { method: 'DELETE' }, hint)
+}
+
+/** Anyone with the link: no sign-in, read-only. */
+export async function readPublicGroupFile(id) {
+  if (!hasApiKey()) {
+    const e = new Error('no_key')
+    e.code = 'no_key'
+    throw e
+  }
+  let res
+  try {
+    res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${API_KEY}`, { cache: 'no-store' })
+  } catch {
+    const e = new Error('offline')
+    e.code = 'offline'
+    throw e
+  }
+  if (!res.ok) {
+    const e = new Error(`Google API ${res.status}`)
+    e.code = res.status === 404 || res.status === 403 ? 'not_found' : 'error'
+    throw e
+  }
+  return res.json()
 }

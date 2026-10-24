@@ -6,11 +6,12 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "not_found_handling": "single-page-application"
   },
-  "durable_objects": {
-    "bindings": [{ "name": "GROUPS", "class_name": "GroupDO" }]
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupDO"] }]
+  // An earlier build had a server-side groups feature (Durable Object "GroupDO"). It was replaced by Drive-hosted
+  // groups, so this migration retires that class. Keep both entries: they are the migration history.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["GroupDO"] },
+    { "tag": "v2", "deleted_classes": ["GroupDO"] }
+  ]
 }

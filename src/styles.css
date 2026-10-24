@@ -340,3 +340,5 @@ img, svg { -webkit-user-drag: none; user-drag: none; }
 /* settle-up checkbox rows */
 .item.check { cursor: pointer; }
 .item.check input[type='checkbox'] { width: 22px; height: 22px; flex: none; accent-color: #03a7c3; cursor: pointer; }
+
+.logo-sm { width: 26px; height: auto; flex: none; }

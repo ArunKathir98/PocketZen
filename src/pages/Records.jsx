@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Plus, ReceiptText } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { groupByDay, inRange, periodLabel, periodRange, shiftCursor, summarize } from '../lib/calc'
 import { fmtDay, fmtTime, money, toDateStr } from '../lib/util'

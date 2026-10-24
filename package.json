@@ -1,13 +1,13 @@
 {
   "name": "pocketzen",
   "private": true,
+  "description": "PocketZen — a personal finance PWA that keeps your records in your own Google Drive",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host",
-    "worker": "vite build && wrangler dev --port 8787",
     "icons": "node scripts/make-icons.mjs",
     "poster": "node scripts/poster/make.mjs"
   },

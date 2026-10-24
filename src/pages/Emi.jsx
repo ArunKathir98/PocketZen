@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarClock, HandCoins, Pencil, Plus, Trash2, Undo2 } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { emiStats, schedule } from '../lib/emi'
-import { addMonths, currencySymbol, fmtDay, money, nowTimeStr, round2, todayStr, uid } from '../lib/util'
+import { currencySymbol, money, nowTimeStr, round2, todayStr, uid } from '../lib/util'
 import { useDialog } from '../components/dialog'
 import { Empty, Modal } from '../components/ui'
 

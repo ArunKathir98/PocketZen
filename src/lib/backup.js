@@ -61,10 +61,6 @@ export async function parseBackup(text, password) {
   return o
 }
 
-export const isEncryptedText = (text) => {
-  try { return JSON.parse(text)?.encrypted === true } catch { return false }
-}
-
 /**
  * Saves a backup: the phone's share sheet when it can take files (Files, Drive, WhatsApp, email…),
  * otherwise a normal download. Resolves 'shared' | 'downloaded' | 'cancelled'.

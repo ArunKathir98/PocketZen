@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CircleUserRound, Handshake, HandCoins, Users, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
-import { getPendingJoin } from './lib/pendingJoin'
-import { useDialog } from './components/dialog'
+import { clearPendingJoin, getPendingJoin } from './lib/pendingJoin'
+import { isGroupId, parseGroupRef } from './lib/groupState'
+import PublicGroup from './pages/PublicGroup'
 import { Logo } from './components/ui'
 import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
 import LocalWelcome from './components/LocalWelcome'
@@ -38,24 +39,17 @@ const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncingâ€
 
 export default function App() {
   const { session, ready, locked, data, sync, reconnect, isLocal, setSettings } = useApp()
-  const { alert } = useDialog()
-  const warnedJoin = useRef(false)
+  const [showPublic, setShowPublic] = useState(true)
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
   const tabs = TABS.filter((t) => (isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]]))
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
 
-  // Opened from an invite link: go straight to Groups (a Google account is needed for groups).
+  // Opened from a group link while signed in with Google: go to Groups and offer to save it.
   useEffect(() => {
     if (!session || !ready || locked || !getPendingJoin()) return
-    if (isLocal) {
-      if (!warnedJoin.current) {
-        warnedJoin.current = true
-        alert({ title: 'Sign in to join', message: 'Group expenses need a Google account. Connect Google in Profile â†’ Backup & sync, then open the invite link again.' })
-      }
-      return
-    }
+    if (isLocal) return // they can view the group on the public page; saving groups needs a Google account
     if (!data.settings.showGroups) setSettings({ showGroups: true })
     setTab('groups')
   }, [session, ready, locked, isLocal]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -78,8 +72,14 @@ export default function App() {
   }, [session, locked, isLocal, data])
 
   if (!ready) return <div className="auth"><Logo className="logo-lg" /></div>
+  if (session && locked) return <><div className="ambient" /><PinLock /></>
+  // A group link opened by someone not signed in with Google: show it read-only, no sign-in needed.
+  const link = getPendingJoin() ? parseGroupRef(getPendingJoin()) : ''
+  if (link && !isGroupId(link)) clearPendingJoin()
+  if (isGroupId(link) && showPublic && (!session || isLocal)) {
+    return <PublicGroup id={link} onClose={(keep) => { if (!keep) clearPendingJoin(); setShowPublic(false) }} />
+  }
   if (!session) return <><div className="ambient" /><Login /></>
-  if (locked) return <><div className="ambient" /><PinLock /></>
 
   const Page = tabs.find((t) => t[0] === tab)?.[3] || Records
   const activeTab = tabs.some((t) => t[0] === tab) ? tab : 'records'

@@ -323,3 +323,6 @@ button.item:hover { background: var(--surface-2); }
 .bottom-nav .nav-item { min-width: 56px; }
 
 .banner.install { background: color-mix(in srgb, var(--g2) 16%, var(--surface)); border-color: color-mix(in srgb, var(--g2) 40%, transparent); }
+
+a.setting { color: inherit; text-decoration: none; }
+a.setting:hover, button.setting:hover { background: var(--surface-2); }

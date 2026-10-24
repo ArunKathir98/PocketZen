@@ -7,6 +7,7 @@ import { askNotificationPermission, notificationsSupported } from '../lib/remind
 import { download, todayStr } from '../lib/util'
 import PinPad from '../components/PinPad'
 import NotificationsCard from '../components/NotificationsCard'
+import ShareCard from '../components/ShareCard'
 import { Modal, Toggle } from '../components/ui'
 import { useDialog } from '../components/dialog'
 
@@ -165,6 +166,9 @@ Replace your current data, or merge the backup into it?`,
           </button>
           <input ref={file} type="file" accept="application/json,.json" hidden onChange={doImport} />
         </div>
+
+        <div className="section-title">Share &amp; feedback</div>
+        <ShareCard onMessage={setMsg} />
 
         <button className="btn danger block" style={{ marginTop: 10 }} onClick={() => confirm('Log out of PocketZen on this device?\nYour data stays safe in your Google Drive.') && logout()}>
           <LogOut size={18} /> Log out

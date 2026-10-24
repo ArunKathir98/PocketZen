@@ -1,4 +1,7 @@
 import { addDays, parseDate, toDateStr } from './util'
+import { fireReminder, notificationsSupported } from './notify'
+
+export { notificationsSupported }
 
 export const REPEATS = [
   { id: 'none', label: 'Once' },
@@ -49,25 +52,11 @@ const markFired = (key) => {
   localStorage.setItem(FIRED_KEY, JSON.stringify(f))
 }
 
-export const notificationsSupported = () => typeof Notification !== 'undefined'
 
 export async function askNotificationPermission() {
   if (!notificationsSupported()) return 'unsupported'
   if (Notification.permission === 'granted') return 'granted'
   return Notification.requestPermission()
-}
-
-async function show(title, body, tag) {
-  if (notificationsSupported() && Notification.permission === 'granted') {
-    try {
-      const reg = await navigator.serviceWorker?.ready
-      if (reg?.showNotification) {
-        await reg.showNotification(title, { body, tag, icon: '/pwa-192.png', badge: '/favicon.png' })
-        return
-      }
-    } catch { /* fall through */ }
-    try { new Notification(title, { body, tag, icon: '/pwa-192.png' }) } catch { /* ignore */ }
-  }
 }
 
 /** Checks due reminders / the daily nudge. Returns in-app messages for anything that fired. */
@@ -81,7 +70,7 @@ export function checkDue(data, now = new Date()) {
     if (fired[key]) continue
     markFired(key)
     const body = r.amount ? `Due now · ${r.title}` : r.title
-    show(`Bill reminder: ${r.title}`, body, key)
+    fireReminder({ title: `Bill reminder: ${r.title}`, body, tag: key }, data.settings)
     messages.push({ id: key, title: r.title, body: 'Bill is due' })
   }
   const s = data.settings
@@ -94,7 +83,7 @@ export function checkDue(data, now = new Date()) {
       const todayStr = toDateStr(now)
       const hasToday = data.transactions.some((t) => t.date === todayStr)
       if (!hasToday) {
-        show('PocketZen', "Don't forget to add today's expenses.", key)
+        fireReminder({ title: 'PocketZen', body: "Don't forget to add today's expenses.", tag: key }, data.settings)
         messages.push({ id: key, title: 'Daily reminder', body: "Don't forget to add today's expenses." })
       }
     }

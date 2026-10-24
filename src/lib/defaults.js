@@ -52,6 +52,7 @@ export const defaultSettings = () => ({
   dailyReminderTime: '20:00',
   showEmi: false,
   showReminders: false,
+  notifySound: true,
 })
 
 export const emptyData = () => ({

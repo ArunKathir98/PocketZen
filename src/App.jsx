@@ -3,6 +3,7 @@ import { CircleUserRound, HandCoins, Landmark, LayoutGrid, ListChecks, PiggyBank
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { Logo } from './components/ui'
+import { InstallBanner, NotifyBanner } from './components/Banners'
 import Login from './pages/Login'
 import PinLock from './pages/PinLock'
 import Records from './pages/Records'
@@ -42,7 +43,12 @@ export default function App() {
     }
     run()
     const id = setInterval(run, 30000)
-    return () => clearInterval(id)
+    const onVis = () => document.visibilityState === 'visible' && run()
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [session, locked, data])
 
   if (!session) return <><div className="ambient" /><Login /></>
@@ -67,6 +73,10 @@ export default function App() {
         </nav>
 
         <main className="content">
+          <div className="page" style={{ paddingBottom: 0, paddingTop: 'calc(var(--safe-t) + 10px)' }}>
+            <InstallBanner style={{ marginBottom: 0 }} />
+            <NotifyBanner />
+          </div>
           {(sync === 'auth' || sync === 'error') && (
             <div className="page" style={{ paddingBottom: 0 }}>
               <div className="banner" role="alert" style={{ marginBottom: 0 }}>

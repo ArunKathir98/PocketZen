@@ -2,6 +2,7 @@ import { CalendarClock, CloudCog, PiggyBank, ShieldCheck } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { hasClientId } from '../lib/google'
 import { GoogleG, Logo } from '../components/ui'
+import { InstallBanner } from '../components/Banners'
 
 const FEATURES = [
   [PiggyBank, 'Track income, expenses & transfers'],
@@ -24,6 +25,8 @@ export default function Login() {
             top of bills — with your financial records stored in your own Google Drive.
           </p>
         </div>
+        <div className="stack">
+        <InstallBanner />
         <div className="card pad" style={{ padding: 24 }}>
           <ul className="feat">
             {FEATURES.map(([Icon, text]) => (
@@ -43,6 +46,7 @@ export default function Login() {
           <p className="fine" style={{ textAlign: 'center' }}>
             PocketZen only accesses its own hidden app folder in your Drive. You stay signed in until you log out.
           </p>
+        </div>
         </div>
       </div>
     </div>

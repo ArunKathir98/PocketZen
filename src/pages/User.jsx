@@ -6,6 +6,7 @@ import { hashPin, verifyPin } from '../lib/pin'
 import { askNotificationPermission, notificationsSupported } from '../lib/reminders'
 import { download, todayStr } from '../lib/util'
 import PinPad from '../components/PinPad'
+import NotificationsCard from '../components/NotificationsCard'
 import { Modal, Toggle } from '../components/ui'
 import { useDialog } from '../components/dialog'
 
@@ -109,6 +110,9 @@ Replace your current data, or merge the backup into it?`,
             <Toggle on={s.dailyReminder} onChange={toggleDaily} label="Daily expense reminder" />
           </div>
         </div>
+
+        <div className="section-title">Notifications</div>
+        <NotificationsCard onMessage={setMsg} />
 
         <div className="section-title">Pages</div>
         <div className="card list">

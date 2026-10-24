@@ -321,3 +321,5 @@ button.item:hover { background: var(--surface-2); }
 .bottom-nav { overflow-x: auto; scrollbar-width: none; }
 .bottom-nav::-webkit-scrollbar { display: none; }
 .bottom-nav .nav-item { min-width: 56px; }
+
+.banner.install { background: color-mix(in srgb, var(--g2) 16%, var(--surface)); border-color: color-mix(in srgb, var(--g2) 40%, transparent); }

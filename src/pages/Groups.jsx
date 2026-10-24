@@ -17,6 +17,7 @@ const colorOf = (s) => colors[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % 
 export const friendlyGroupError = (e) =>
   /popup_closed|access_denied/.test(e?.message || '') ? 'The Google permission request was cancelled.'
     : e?.code === 'no_key' ? 'Viewing group links needs the app\'s Google API key (VITE_GOOGLE_API_KEY). See the README.'
+    : e?.code === 'bad_key' ? "Google rejected the app's API key for this website. Check the key's website restrictions and that the Drive API is enabled (see the README)."
     : e?.code === 'offline' || !navigator.onLine ? 'You seem to be offline.'
     : e?.code === 'not_found' || e?.status === 404 ? 'No group found. The link may be wrong, or the admin turned sharing off or deleted it.'
     : e?.status === 403 ? 'Google did not allow that. Make sure you granted the Drive permission when asked.'

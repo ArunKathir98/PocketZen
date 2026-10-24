@@ -233,8 +233,14 @@ export async function readPublicGroupFile(id) {
     throw e
   }
   if (!res.ok) {
+    let detail = ''
+    try { detail = JSON.stringify((await res.json()).error || {}) } catch { /* no body */ }
     const e = new Error(`Google API ${res.status}`)
-    e.code = res.status === 404 || res.status === 403 ? 'not_found' : 'error'
+    e.status = res.status
+    // Google rejecting the key itself (wrong key, website restriction, Drive API not enabled) is a setup problem,
+    // not "group not found".
+    const keyProblem = /API key not valid|API_KEY_INVALID|API_KEY_HTTP_REFERRER_BLOCKED|API_KEY_SERVICE_BLOCKED|referer|SERVICE_DISABLED|accessNotConfigured|has not been used/i.test(detail)
+    e.code = keyProblem ? 'bad_key' : res.status === 404 || res.status === 403 ? 'not_found' : 'error'
     throw e
   }
   return res.json()

@@ -70,8 +70,8 @@ export default function GroupView({ entry, onBack, publicMode = false }) {
         {admin && status === 'scope' ? (
           <div className="banner" role="alert" style={{ marginTop: 14 }}><span>Allow PocketZen to open this group's file in your Google Drive.</span>
             <button className="btn sm primary" onClick={async () => { try { await google.enableGroupScope(session?.email); refresh() } catch { /* cancelled */ } }}>Allow</button></div>
-        ) : status === 'nokey' ? (
-          <div className="banner" role="alert" style={{ marginTop: 14 }}><span>Viewing links needs the app's Google API key. See the README.</span></div>
+        ) : status === 'nokey' || status === 'badkey' ? (
+          <div className="banner" role="alert" style={{ marginTop: 14 }}><span>{status === 'nokey' ? "Viewing links needs the app's Google API key (VITE_GOOGLE_API_KEY). See the README." : "Google rejected the app's API key for this website. Check the key's website restrictions and that the Drive API is enabled (see the README)."}</span></div>
         ) : (
           <p className="muted" style={{ marginTop: 18 }}>
             {status === 'offline' ? "Can't reach the group — check your connection." : status === 'auth' ? 'Google needs to reconnect.' : 'Loading…'}
@@ -111,7 +111,8 @@ export default function GroupView({ entry, onBack, publicMode = false }) {
             <button className="btn sm primary" onClick={async () => { try { await google.enableGroupScope(session?.email); refresh() } catch { /* cancelled */ } }}>Allow</button></div>
         )}
         {admin && status === 'auth' && <div className="banner" role="alert" style={{ marginBottom: 0 }}><span>Google needs to reconnect. Tap “Reconnect” above.</span></div>}
-        {status === 'nokey' && <div className="banner" role="alert" style={{ marginBottom: 0 }}><span>Viewing links needs the app's Google API key. See the README.</span></div>}
+        {status === 'nokey' && <div className="banner" role="alert" style={{ marginBottom: 0 }}><span>Viewing links needs the app's Google API key (VITE_GOOGLE_API_KEY). See the README.</span></div>}
+        {status === 'badkey' && <div className="banner" role="alert" style={{ marginBottom: 0 }}><span>Google rejected the app's API key for this website. Check the key's website restrictions and that the Drive API is enabled (see the README).</span></div>}
         <div className="hero">
           <div className="label">Total spent</div>
           <div className="big num">{money(total)}</div>

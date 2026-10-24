@@ -55,7 +55,7 @@ export function useGroup(id, role = 'viewer', hint) {
     } catch (e) {
       failed = true
       const code = e.code || (e.status === 404 ? 'not_found' : '')
-      setStatus(code === 'not_found' || e.status === 404 ? 'missing' : code === 'no_key' ? 'nokey' : e.status === 401 || e.status === 403 || /popup|auth|access_denied|interaction|login/i.test(e.message || '') ? 'auth' : 'offline')
+      setStatus(code === 'not_found' || e.status === 404 ? 'missing' : code === 'no_key' ? 'nokey' : code === 'bad_key' ? 'badkey' : e.status === 401 || e.status === 403 || /popup|auth|access_denied|interaction|login/i.test(e.message || '') ? 'auth' : 'offline')
     } finally {
       busy.current = false
       if (!failed && admin && outboxRef.current.length) sync() // edits made while we were saving

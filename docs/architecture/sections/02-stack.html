@@ -1,0 +1,61 @@
+<h1>2 · Tech stack and packages</h1>
+
+<p>The dependency list is deliberately tiny: <b>three runtime packages</b>. Everything else is browser platform APIs.</p>
+
+<h2>2.1 Runtime dependencies (shipped to users)</h2>
+<table>
+  <thead><tr><th style="width:20%">Package</th><th style="width:14%">Version</th><th>Role</th><th style="width:34%">Why this and not something else</th></tr></thead>
+  <tbody>
+    <tr><td>react</td><td>^19.3</td><td>Component model, hooks, Context, <code>StrictMode</code></td><td>Familiar to the target maintainers. Hooks + Context are enough for this app's state.</td></tr>
+    <tr><td>react-dom</td><td>^19.3</td><td>Renders React in the browser (<code>createRoot</code>)</td><td>Required by React.</td></tr>
+    <tr><td>lucide-react</td><td>^1.61</td><td>Icons as small SVG components (tree-shaken per import)</td><td>Consistent outline style, no icon font download, only the icons used end up in the bundle.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.2 Development and build dependencies</h2>
+<table>
+  <thead><tr><th style="width:22%">Package</th><th style="width:12%">Version</th><th>Role</th><th style="width:32%">Why</th></tr></thead>
+  <tbody>
+    <tr><td>vite</td><td>^8.3</td><td>Dev server (instant start, hot reload) and production bundler</td><td>Fast, almost zero config for React, first-class env variables (<code>VITE_*</code>).</td></tr>
+    <tr><td>@vitejs/plugin-react</td><td>^6.1</td><td>JSX transform and Fast Refresh</td><td>Official React plugin for Vite.</td></tr>
+    <tr><td>vite-plugin-pwa</td><td>^2.0</td><td>Generates <code>manifest.webmanifest</code> and a Workbox service worker that precaches the app</td><td>Gives an installable, offline-capable PWA without hand-writing a service worker.</td></tr>
+    <tr><td>wrangler</td><td>^4.152</td><td>Cloudflare's CLI; <code>npx wrangler deploy</code> publishes <code>dist/</code> as static assets</td><td>Pinned in the repo so Cloudflare's Git build uses a known version.</td></tr>
+    <tr><td>sharp</td><td>^0.35</td><td>Build-time image processing (<code>npm run icons</code>, poster JPEG)</td><td>Turns the white-background logo into a transparent PNG and generates every PWA icon size.</td></tr>
+    <tr><td>qrcode</td><td>^1.5</td><td>Draws the QR code on the share poster</td><td>Tiny, outputs SVG.</td></tr>
+    <tr><td>playwright-core</td><td>^1.64</td><td>Drives a headless Chrome/Edge to render the poster and this PDF</td><td>Reuses the browser already installed, so no big download.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.3 Things we deliberately did <i>not</i> add</h2>
+<table>
+  <thead><tr><th style="width:28%">Not used</th><th>What we did instead</th></tr></thead>
+  <tbody>
+    <tr><td>React Router</td><td>The app has one URL. The active page is a <code>tab</code> state in <code>App.jsx</code>, remembered in <code>localStorage</code>. Fewer moving parts and no server rewrite rules.</td></tr>
+    <tr><td>Redux / Zustand</td><td>One Context (<code>store.jsx</code>) holding one JSON document, plus refs for the latest value. Easy to reason about and trivially serialisable to Drive.</td></tr>
+    <tr><td>Tailwind / a UI kit</td><td>One hand-written <code>styles.css</code> with CSS custom properties (design tokens), light/dark themes and a few reusable classes.</td></tr>
+    <tr><td>date-fns / moment</td><td>~80 lines in <code>util.js</code>; dates are stored as <code>'YYYY-MM-DD'</code> strings, which sort correctly and avoid time-zone bugs.</td></tr>
+    <tr><td>A crypto library</td><td>The Web Crypto API (PBKDF2, AES-GCM, SHA-256) built into every browser.</td></tr>
+    <tr><td>A PDF library (jsPDF…)</td><td>Pages are drawn on a canvas and packed into a PDF by a 40-line writer, so any language and the ₹ symbol render correctly (standard PDF fonts can't).</td></tr>
+    <tr><td>The Google API client library (gapi)</td><td>Plain <code>fetch</code> calls to the Drive REST API; only Google Identity Services is loaded as a script.</td></tr>
+    <tr><td>A backend framework or database</td><td>None. See chapter 1.</td></tr>
+  </tbody>
+</table>
+<div class="adv">Small dependency surface = small bundle (about 440 KB of JavaScript, roughly 130 KB compressed, for the whole app), few security advisories to track, and nothing that can break on an upgrade except React and Vite.</div>
+
+<h2>2.4 Browser platform APIs the app relies on</h2>
+<table>
+  <thead><tr><th style="width:30%">API</th><th>Used for</th><th style="width:26%">File</th></tr></thead>
+  <tbody>
+    <tr><td>IndexedDB</td><td>Main on-device database (user data, cached groups, outboxes)</td><td><code>lib/idb.js</code></td></tr>
+    <tr><td>localStorage</td><td>Small flags: session, token, dirty / synced markers, tab, theme</td><td>various</td></tr>
+    <tr><td>Web Crypto</td><td>PIN and recovery-code hashing (PBKDF2), encrypted backups (AES-GCM)</td><td><code>pin.js</code>, <code>backup.js</code></td></tr>
+    <tr><td>Google Identity Services</td><td>OAuth access tokens (script loaded in <code>index.html</code>)</td><td><code>google.js</code></td></tr>
+    <tr><td>Drive REST API v3 (fetch)</td><td>Reading and writing the data file and group files</td><td><code>google.js</code></td></tr>
+    <tr><td>Service Worker + Notifications</td><td>Offline cache, system notifications, click handling</td><td><code>public/sw-notify.js</code>, <code>notify.js</code></td></tr>
+    <tr><td>Web Audio + Vibration</td><td>Reminder chime and haptics while the app is open</td><td><code>notify.js</code></td></tr>
+    <tr><td>Web Share + Clipboard</td><td>Share app, backups, PDFs and invites; copy text</td><td>several components</td></tr>
+    <tr><td>Canvas 2D</td><td>Draws the group summary pages for the PDF</td><td><code>groupPdf.js</code></td></tr>
+    <tr><td>Intl.NumberFormat / toLocale…</td><td>Currency and date formatting in the user's locale</td><td><code>util.js</code>, <code>groupState.js</code></td></tr>
+    <tr><td><code>beforeinstallprompt</code>, display-mode</td><td>Custom "Install app" banner</td><td><code>install.js</code></td></tr>
+  </tbody>
+</table>

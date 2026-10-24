@@ -1,0 +1,85 @@
+<h1>9 · Feature modules</h1>
+<p>Each feature follows the same pattern: <b>a page</b> (UI) + <b>a pure module</b> (rules) + <b>data in the document</b> (changed only through <code>useApp()</code>).</p>
+
+<h2>9.1 Records and the Add sheet</h2>
+<ul>
+  <li><b>Page:</b> <code>Records.jsx</code>. State: <code>mode</code> (day/week/month) and <code>cursor</code> (a Date). <code>calc.periodRange(mode, cursor)</code> returns inclusive <code>{from,to}</code> date strings;
+      <code>summarize()</code> gives income / expense / net; <code>groupByDay()</code> builds the grouped list. Weeks start on Monday.</li>
+  <li><b>Form:</b> <code>AddSheet.jsx</code> handles income, expense and transfer in one modal. Transfers need two different accounts and no category.</li>
+  <li><b>Budget hint:</b> for an expense in a budgeted category it shows <i>left = budget − spent this month (excluding the record being edited)</i> and what remains after the typed amount
+      (<code>calc.monthSpentByCategory</code>).</li>
+  <li>Dates are <code>'YYYY-MM-DD'</code> strings and times <code>'HH:mm'</code>; sorting is plain string comparison.</li>
+</ul>
+
+<h2>9.2 Categories, Accounts, Budget</h2>
+<ul>
+  <li><b>Categories:</b> add/edit/delete with emoji + colour. Deleting a used category is allowed: its records show as "Uncategorized" and its budget is removed.
+      Tapping a category opens <code>CategoryDetail</code> (all its transactions, Monthly/Weekly/Daily/All filter, budget bar).</li>
+  <li><b>Accounts:</b> balance is computed (<code>accountBalance</code>), never stored. An account with records cannot be deleted (the dialog says why).</li>
+  <li><b>Budget:</b> one monthly limit per expense category; the page sums that month's expenses per category and shows progress (amber from 80 %, red over 100 %).</li>
+</ul>
+
+<h2>9.3 EMIs (<code>emi.js</code>, <code>Emi.jsx</code>)</h2>
+<pre><code>paidCount  = paidBefore + payments.length
+paidAmount = paidBefore × emiAmount + Σ payments.amount
+pending    = max(0, totalMonths − paidCount)
+remaining  = max(0, totalAmount − paidAmount)
+nextDue    = addMonths(startDate, paidCount)       <span class="c">// month-end safe: Jan 31 → Feb 28</span>
+nextAmount = pending === 1 ? remaining : emiAmount <span class="c">// the last instalment clears rounding leftovers</span></code></pre>
+<p>"Pay EMI" records a payment and, if an account is chosen, also adds an expense under an auto-created <b>"EMI &amp; Loans"</b> category (the payment keeps the
+<code>txId</code>, so "Undo last" removes both). Completed EMIs move to their own tab.</p>
+
+<h2>9.4 Loans and people (<code>loans.js</code>, <code>Loans.jsx</code>)</h2>
+<p>A <b>loan</b> belongs to a <b>person</b> and has a direction (<code>lent</code> = they owe you, <code>borrowed</code> = you owe them). Its entire state is a list of dated
+<b>events</b>; every number on screen is derived from them by <code>loanStats(loan, asOf)</code>.</p>
+<table>
+  <thead><tr><th style="width:18%">Event kind</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>principal</code></td><td>Money given/taken (the first one is the opening amount; later ones are top-ups).</td></tr>
+    <tr><td><code>payment</code></td><td><code>{ amount, principalPart, interestPart }</code> — the split is chosen by the user ("interest first" by default via <code>suggestSplit</code>).</td></tr>
+    <tr><td><code>interest</code></td><td>A manual interest charge.</td></tr>
+    <tr><td><code>terms</code></td><td>Interest rate / fixed amount changes from this date onward.</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:18%">Interest type</th><th>How it accrues</th></tr></thead>
+  <tbody>
+    <tr><td>none</td><td>—</td></tr>
+    <tr><td>fixed</td><td>The fixed amount is added on every monthly anniversary of the start date <i>while principal is outstanding</i>.</td></tr>
+    <tr><td>simple</td><td><code>P × monthlyRate × (wholeMonths + days/30)</code> per segment, where <code>monthlyRate = rate/100</code> (per month) or <code>rate/100/12</code> (per year).</td></tr>
+    <tr><td>compound</td><td>Like simple, but each whole month uses <code>(P + unpaidInterest) × monthlyRate</code>; the part-month remainder is pro-rated.</td></tr>
+    <tr><td>manual</td><td>Nothing automatic; the user adds interest events.</td></tr>
+  </tbody>
+</table>
+<p>The engine sorts events by date, walks them in order, and before applying each event "advances" accrual from the previous date to that date. Rate changes and
+repayments therefore split the timeline into segments. Outputs: principal in/paid/balance, interest charged/paid/due, <code>outstanding = principal + max(0, interestDue)</code>,
+<code>settled</code>, <code>nextInterestOn</code>. <code>personSummary()</code> adds a person's loans (receivable minus payable) and <code>buildStatement()</code> creates the WhatsApp-ready text.</p>
+<div class="why"><b>Why events instead of storing balances?</b> A history of events can be edited (delete a wrong payment) and every figure is recalculated correctly. Stored balances would
+need manual repair after any correction. Verified numbers: ₹10 000 at 2 %/month for 3 months → ₹600; 12 %/year on ₹12 000 for 6 months → ₹720; compound 2 %/month for 3 months → ₹612.08.</div>
+<p>Optionally an entry is also recorded as a normal income/expense in an account (categories "Money lent", "Money borrowed", "Loan repayment received/paid"); the event stores the
+<code>txId</code> so deleting the entry removes that record too.</p>
+
+<h2>9.5 Reminders and notifications (<code>reminders.js</code>, <code>notify.js</code>)</h2>
+<ul>
+  <li><b>Recurrence:</b> <code>occurrence(r, n)</code> returns the n-th due date (daily +n days, weekly +7n, monthly +n months clamped to month length). <code>nextOccurrence(r)</code>
+      uses <code>doneCount</code> ("Mark done" increments it) and honours <code>until</code>.</li>
+  <li><b><code>checkDue(data)</code></b> (called every 30 s while the app runs) fires: due bill reminders; loan interest days (09:00, the loan's start day each month) and repay-by dates;
+      and the daily expense nudge (skipped if a record already exists today). A "fired" map in <code>localStorage['pz:fired']</code> makes each reminder fire once.</li>
+  <li><b><code>fireReminder()</code></b>: if the app is visible → in-app toast + chime (Web Audio) + vibration; if hidden → a system notification through the service worker
+      (<code>registration.showNotification</code>, so tapping it re-opens the app).</li>
+</ul>
+<div class="warn"><b>Hard platform limits:</b> a website cannot schedule an alert for a phone that is locked or has the app fully closed (that needs a push server), and it cannot choose the system
+notification sound. The UI states this plainly; the sound/vibration toggle controls the in-app chime and whether the notification is "silent".</div>
+
+<h2>9.6 Backup, restore and the lite mode</h2>
+<ul>
+  <li><b>Backup</b> (<code>BackupModal</code>): optional password; shares via the share sheet or downloads; records <code>settings.lastBackupAt</code>. Local-only users get a
+      <code>BackupBanner</code> after 14 days (snoozable for 3).</li>
+  <li><b>Import:</b> reads the file, asks for a password if encrypted, then <i>Replace all</i> or <i>Merge</i> (<code>mergeData</code>).</li>
+  <li><b>Lite mode:</b> <code>App.jsx</code> filters the tab list to four pages, <code>User.jsx</code> hides notification/page settings, reminders don't run. Everything else is shared code,
+      which is why upgrading to Google later is just a data move (7.7).</li>
+</ul>
+
+<h2>9.7 Profile page structure (<code>User.jsx</code>)</h2>
+<p>Sections in order: profile card → Backup &amp; sync (<code>CloudCard</code>) → Appearance (theme, stored in <code>pz:theme</code>) → Preferences (currency, daily reminder) →
+Notifications → Pages (optional-page toggles) → Security (PIN) → Your data (export/import) → Share &amp; feedback → Log out / Erase. Google-only sections are hidden in lite mode.</p>

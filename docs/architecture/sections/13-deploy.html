@@ -1,0 +1,70 @@
+<h1>13 · Build, configuration and deployment</h1>
+
+<h2>13.1 Commands</h2>
+<table>
+  <thead><tr><th style="width:30%">Command</th><th>Does</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm install</code></td><td>Install dependencies.</td></tr>
+    <tr><td><code>npm run dev</code></td><td>Vite dev server at <code>http://localhost:5173</code> with hot reload.</td></tr>
+    <tr><td><code>npm run build</code></td><td>Production bundle into <code>dist/</code> plus the service worker and manifest.</td></tr>
+    <tr><td><code>npm run preview</code></td><td>Serves <code>dist/</code> so you can test the installable build.</td></tr>
+    <tr><td><code>npm run icons</code></td><td>Regenerate PWA icons from <code>src/assets/logo-source.jpg</code>.</td></tr>
+    <tr><td><code>npm run poster -- &lt;url&gt; --form &lt;formUrl&gt;</code></td><td>Render the share poster (needs a build first) and refresh <code>public/share-poster.jpg</code>.</td></tr>
+    <tr><td><code>npm run docs</code></td><td>Rebuild this PDF from <code>docs/architecture</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>13.2 Environment variables</h2>
+<table>
+  <thead><tr><th style="width:32%">Variable</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>VITE_GOOGLE_CLIENT_ID</code></td><td>OAuth web client id (sign-in).</td></tr>
+    <tr><td><code>VITE_GOOGLE_API_KEY</code></td><td>Browser API key, restricted to the site and the Drive API. Enables group view links (optional).</td></tr>
+  </tbody>
+</table>
+<div class="warn">Vite replaces <code>import.meta.env.VITE_*</code> with literal text <b>at build time</b>. On Cloudflare they must be <b>build</b> variables, and the site must be rebuilt after changing them. A runtime Worker variable has no effect on the bundle.</div>
+
+<h2>13.3 Google Cloud checklist</h2>
+<ol>
+  <li>Create a project; enable the <b>Google Drive API</b>.</li>
+  <li>Google Auth Platform: name, support email, home page <code>/home.html</code>, privacy policy <code>/privacy.html</code>; Data Access scopes <code>openid, email, profile, drive.appdata, drive.file</code>; publish to Production (no review needed for these scopes).</li>
+  <li>OAuth client (Web): authorised JavaScript origins = <code>http://localhost:5173</code> + the production origin (no trailing slash).</li>
+  <li>API key: Websites restriction (<code>https://&lt;domain&gt;/*</code>, <code>http://localhost:5173/*</code>) and API restriction = Drive API.</li>
+</ol>
+<div class="note"><b>Consent screen name.</b> Google shows the app name and logo only after <i>brand verification</i>, which needs a domain you own. On a shared <code>workers.dev</code> address the consent screen shows the address instead.
+A custom domain is the way to get "Sign in to PocketZen".</div>
+
+<h2>13.4 Cloudflare Workers (free)</h2>
+<pre><code><span class="c">// wrangler.jsonc</span>
+{
+  <span class="s">"name"</span>: <span class="s">"pocketzen"</span>,
+  <span class="s">"main"</span>: <span class="s">"worker/index.js"</span>,                <span class="c">// export default { fetch: (req, env) =&gt; env.ASSETS.fetch(req) }</span>
+  <span class="s">"compatibility_date"</span>: <span class="s">"2026-10-01"</span>,
+  <span class="s">"assets"</span>: { <span class="s">"directory"</span>: <span class="s">"./dist"</span>, <span class="s">"binding"</span>: <span class="s">"ASSETS"</span>, <span class="s">"not_found_handling"</span>: <span class="s">"single-page-application"</span> },
+  <span class="s">"migrations"</span>: [ { <span class="s">"tag"</span>: <span class="s">"v1"</span>, <span class="s">"new_sqlite_classes"</span>: [<span class="s">"GroupDO"</span>] },
+                  { <span class="s">"tag"</span>: <span class="s">"v2"</span>, <span class="s">"deleted_classes"</span>: [<span class="s">"GroupDO"</span>] } ]   <span class="c">// retires the old server-based groups</span>
+}</code></pre>
+<table>
+  <thead><tr><th style="width:28%">Cloudflare setting</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Git repository</td><td>ArunKathir98/PocketZen, branch <code>main</code> (every push redeploys)</td></tr>
+    <tr><td>Build command</td><td><code>npm run build</code></td></tr>
+    <tr><td>Deploy command</td><td><code>npx wrangler deploy</code></td></tr>
+    <tr><td>Build variables</td><td><code>VITE_GOOGLE_CLIENT_ID</code>, <code>VITE_GOOGLE_API_KEY</code>, <code>NODE_VERSION=22</code></td></tr>
+  </tbody>
+</table>
+<div class="why"><b>Why Workers static assets and not Pages?</b> Cloudflare is steering new projects to Workers; it is free for static sites, has global CDN, and the same config can later grow API routes.
+The tiny <code>worker/index.js</code> exists only so the migration history (which retires an old Durable Object) can be applied.</div>
+
+<h2>13.5 Static pages for Google's consent screen</h2>
+<p><code>public/home.html</code> (what the app is) and <code>public/privacy.html</code> (privacy policy) are plain HTML files copied to the site root. Google requires both URLs to publish an OAuth app. They are
+deliberately not React: crawlers read them without running JavaScript.</p>
+
+<h2>13.6 Release checklist</h2>
+<ol>
+  <li><code>npm run build</code> succeeds locally.</li>
+  <li>Smoke test the preview build: sign in, add a record, reload, check the status pill says "Synced to Drive".</li>
+  <li>Push to <code>main</code>; watch the Cloudflare deploy log.</li>
+  <li>Open the live URL in a private window; reload twice (service-worker update).</li>
+  <li>If environment variables changed, confirm they are <b>build</b> variables and redeploy.</li>
+</ol>

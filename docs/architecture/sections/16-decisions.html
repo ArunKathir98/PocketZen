@@ -1,0 +1,34 @@
+<h1>16 · Decisions, advantages and trade-offs</h1>
+<p>Every row is a decision someone reviewing the code may question. Read the right-hand column before changing it.</p>
+
+<table>
+  <thead><tr><th style="width:18%">Decision</th><th style="width:25%">Why</th><th style="width:28%">Advantage</th><th>Trade-off / when to revisit</th></tr></thead>
+  <tbody>
+    <tr><td>No backend</td><td>Privacy promise, zero hosting cost, nothing to secure or maintain</td><td>No server breach surface, no accounts to manage, free forever</td><td>No refresh tokens, no push, no real-time collaboration. Revisit only if those become core.</td></tr>
+    <tr><td>One JSON document per user</td><td>Small data; simple to sync, export, merge</td><td>One Drive file, trivial backups, easy mental model</td><td>Whole file is rewritten on each sync; revisit at tens of thousands of records.</td></tr>
+    <tr><td>Local-first (IndexedDB)</td><td>Instant UI, offline use</td><td>Network failures never block the user</td><td>Needs a merge strategy when several devices write.</td></tr>
+    <tr><td>Context + refs, no Redux</td><td>One document, one write path</td><td>Almost no boilerplate; <code>commit()</code> is the single place to audit</td><td>Whole tree re-renders on any change; fine at this size, memoise if lists grow.</td></tr>
+    <tr><td>Pure logic modules</td><td>Money maths must be correct and testable</td><td>Bugs in numbers are fixed without opening React; unit tests are plain Node</td><td>Discipline needed: don't import React/DOM into <code>lib/*.js</code> logic files.</td></tr>
+    <tr><td>Event-based loans</td><td>Corrections must stay consistent</td><td>Delete a wrong payment and all figures recompute</td><td>Interest uses a day/30 approximation for part months and approximates compound after mid-month payments.</td></tr>
+    <tr><td>Integer minor units in groups</td><td>Equal splits must add up exactly</td><td>No floating-point drift, deterministic settle-up</td><td>Assumes 2 decimal places (JPY etc. would need a currency table).</td></tr>
+    <tr><td>Union merge</td><td>Never lose financial records</td><td>Safe with stale devices</td><td>A deletion on one device can be resurrected by another (7.5).</td></tr>
+    <tr><td>Groups as Drive files, admin-only edits</td><td>Keep "no server"; avoid concurrent-writer problems</td><td>Simple, private-by-default, free</td><td>Friends can't add expenses; viewers see updates after ≤ 30 s; needs an API key for public reads.</td></tr>
+    <tr><td>Token model + cached token</td><td>Only option without a server</td><td>No secret, no backend; reloads don't open Google's window</td><td>A window can appear about once an hour; token sits in localStorage (≤ 1 h).</td></tr>
+    <tr><td>Canvas → JPEG → PDF</td><td>Any language and "₹" must render</td><td>No font embedding, no PDF dependency</td><td>PDF text not selectable; larger file than vector text.</td></tr>
+    <tr><td>Early-return routing</td><td>One screen with tabs</td><td>No router dependency, no server rewrite rules</td><td>No deep links to pages. Add a router only if deep links become a requirement.</td></tr>
+    <tr><td>Hand-written CSS + tokens</td><td>Small app, custom look</td><td>No framework to learn; dark mode is a token swap</td><td>Class naming needs care (a clash once broke the sync pill).</td></tr>
+    <tr><td>Optional pages behind flags</td><td>Keep the default app simple</td><td>Casual users never see EMIs/loans/groups</td><td>Each new collection must be added in defaults, normalise and merge (11.6).</td></tr>
+    <tr><td>Lite mode for no-account users</td><td>Some people won't use Google</td><td>Wider audience; clean upgrade path</td><td>Fewer features by design; users must back up themselves.</td></tr>
+  </tbody>
+</table>
+
+<h2>16.1 Known limitations (be honest with users)</h2>
+<ul>
+  <li>Reminders alert only while the app can run; there is no alert for a fully closed or locked phone (needs a push server).</li>
+  <li>Notification sound cannot be customised from a website.</li>
+  <li>Without a Google account, data lives only on that device: clearing browser data or losing the phone loses it unless backed up.</li>
+  <li>Group editing is admin-only; group view links are readable by anyone who has them until the admin deletes the group.</li>
+  <li>Branding on Google's consent screen needs a domain you own.</li>
+  <li>The PIN is a casual privacy lock, not strong security.</li>
+  <li>Interest uses a simple month/day calendar approximation; confirm against a lender's statement for legal disputes.</li>
+</ul>

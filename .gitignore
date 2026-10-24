@@ -5,3 +5,4 @@ dev-dist
 .env.local
 poster
 .wrangler
+docs/architecture/_assembled.html

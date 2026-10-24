@@ -1,0 +1,96 @@
+<h1>Appendix A · Reference</h1>
+
+<h2>A.1 Storage keys</h2>
+<table>
+  <thead><tr><th style="width:30%">Key</th><th style="width:16%">Where</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>pz:session</code></td><td>localStorage</td><td>Current session <code>{ sub, mode, email, name, picture, since }</code>. Removed on logout/erase.</td></tr>
+    <tr><td><code>pz:tok</code></td><td>localStorage</td><td>Cached Google access token + expiry (≤ 1 h). Cleared on logout and on a 401.</td></tr>
+    <tr><td><code>pz:groupScope</code></td><td>localStorage</td><td>"<code>1</code>" once this device was granted <code>drive.file</code>; makes later token requests include it.</td></tr>
+    <tr><td><code>pz:dirty:&lt;sub&gt;</code></td><td>localStorage</td><td>Local changes not yet uploaded to Drive.</td></tr>
+    <tr><td><code>pz:synced:&lt;sub&gt;</code></td><td>localStorage</td><td>Drive document <code>updatedAt</code> last seen/written by this device.</td></tr>
+    <tr><td><code>pz:fileId:&lt;sub&gt;</code></td><td>localStorage</td><td>Cached id of <code>pocketzen-data.json</code>.</td></tr>
+    <tr><td><code>pz:theme</code></td><td>localStorage</td><td><code>light | dark | system</code>.</td></tr>
+    <tr><td><code>pz:tab</code></td><td>localStorage</td><td>Last selected tab.</td></tr>
+    <tr><td><code>pz:pendingJoin</code></td><td>localStorage</td><td>Group id from a <code>?view=</code> link, until handled.</td></tr>
+    <tr><td><code>pz:installDismissed</code></td><td>localStorage</td><td>Time the install banner was dismissed (7-day snooze).</td></tr>
+    <tr><td><code>pz:backupSnooze</code></td><td>localStorage</td><td>Backup reminder snoozed until this time (3 days).</td></tr>
+    <tr><td><code>pz:localTipSeen</code></td><td>localStorage</td><td>Welcome tip for no-account users shown.</td></tr>
+    <tr><td><code>pz:fired</code></td><td>localStorage</td><td>Map of reminders already fired (keys like <code>r:id:n</code>, <code>loan:id:YYYY-MM</code>, <code>daily:YYYY-MM-DD</code>).</td></tr>
+    <tr><td><code>pz:kv:&lt;key&gt;</code></td><td>localStorage</td><td>Fallback when IndexedDB is unavailable.</td></tr>
+    <tr><td><code>pz:data:&lt;sub&gt;</code></td><td>localStorage</td><td><i>Legacy</i> location of the document; migrated to IndexedDB on first load.</td></tr>
+    <tr><td><code>data:&lt;sub&gt;</code></td><td>IndexedDB</td><td>The user document.</td></tr>
+    <tr><td><code>group:&lt;id&gt;</code></td><td>IndexedDB</td><td>Cached group state.</td></tr>
+    <tr><td><code>outbox:&lt;id&gt;</code></td><td>IndexedDB</td><td>Admin's unsaved group operations.</td></tr>
+  </tbody>
+</table>
+
+<h2>A.2 Google calls made by the app</h2>
+<table>
+  <thead><tr><th style="width:30%">Call</th><th style="width:22%">Auth</th><th>Used for</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET oauth2/v3/userinfo</code></td><td>Bearer token</td><td>Profile after sign-in (<code>fetchProfile</code>); re-verify for Forgot PIN.</td></tr>
+    <tr><td><code>GET drive/v3/files?spaces=appDataFolder&amp;q=…</code></td><td>Bearer token</td><td>Find <code>pocketzen-data.json</code>.</td></tr>
+    <tr><td><code>GET drive/v3/files/{id}?alt=media</code></td><td>Bearer token</td><td>Download the user document or (admin) a group file.</td></tr>
+    <tr><td><code>POST upload/drive/v3/files?uploadType=multipart</code></td><td>Bearer token</td><td>Create the user file (app-data) or a group file.</td></tr>
+    <tr><td><code>PATCH upload/drive/v3/files/{id}?uploadType=media</code></td><td>Bearer token</td><td>Update either file.</td></tr>
+    <tr><td><code>POST drive/v3/files/{id}/permissions</code></td><td>Bearer token</td><td>Make a group readable by link (Invite).</td></tr>
+    <tr><td><code>DELETE drive/v3/files/{id}</code></td><td>Bearer token</td><td>Delete a group.</td></tr>
+    <tr><td><code>GET drive/v3/files/{id}?alt=media&amp;key=API_KEY</code></td><td>API key only</td><td>Public read of a shared group (viewers, no sign-in).</td></tr>
+  </tbody>
+</table>
+
+<h2>A.3 Event handlers and timers</h2>
+<table>
+  <thead><tr><th style="width:30%">Where</th><th style="width:26%">Trigger</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>store.jsx</code></td><td><code>visibilitychange</code></td><td>Auto-lock after 60 s hidden; foreground sync (valid token only, throttled 15 s).</td></tr>
+    <tr><td><code>store.jsx</code></td><td><code>online</code></td><td>Pull (valid token only).</td></tr>
+    <tr><td><code>store.jsx</code></td><td>debounce 1.5 s</td><td>Push after edits.</td></tr>
+    <tr><td><code>App.jsx</code></td><td>interval 30 s + <code>visibilitychange</code></td><td>Reminder scheduler (<code>checkDue</code>).</td></tr>
+    <tr><td><code>useGroup.js</code></td><td>interval 20 s (admin) / 30 s (viewer), <code>visibilitychange</code>, <code>online</code></td><td>Refresh group.</td></tr>
+    <tr><td><code>ui.jsx</code> Modal</td><td><code>keydown</code> Escape</td><td>Closes only the top modal.</td></tr>
+    <tr><td><code>dialog.jsx</code></td><td><code>keydown</code> Escape (capture phase)</td><td>Dismisses the dialog first.</td></tr>
+    <tr><td><code>PinPad.jsx</code></td><td><code>keydown</code></td><td>Digits and Backspace.</td></tr>
+    <tr><td><code>main.jsx</code></td><td><code>pointerdown</code>/<code>keydown</code> once</td><td>Unlock Web Audio.</td></tr>
+    <tr><td><code>install.js</code></td><td><code>beforeinstallprompt</code>, <code>appinstalled</code></td><td>Remember / forget the install prompt.</td></tr>
+    <tr><td><code>sw-notify.js</code></td><td><code>notificationclick</code>, <code>push</code></td><td>Focus/open the app; show pushed notification.</td></tr>
+    <tr><td><code>PinLock.jsx</code></td><td>5 wrong PINs</td><td>30-second countdown.</td></tr>
+  </tbody>
+</table>
+
+<h2>A.4 Limits and constants worth knowing</h2>
+<table>
+  <thead><tr><th style="width:44%">Constant</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Google access token lifetime</td><td>≈ 1 hour (cached; renewed only when needed)</td></tr>
+    <tr><td>Auto-lock after being hidden</td><td>60 seconds</td></tr>
+    <tr><td>Push debounce / foreground pull throttle</td><td>1.5 s / 15 s</td></tr>
+    <tr><td>Reminder check interval</td><td>30 s</td></tr>
+    <tr><td>Group polling (admin / viewer)</td><td>20 s / 30 s</td></tr>
+    <tr><td>PIN hash / backup key derivation</td><td>PBKDF2-SHA-256, 150 000 / 200 000 iterations; AES-GCM 256</td></tr>
+    <tr><td>Recovery code</td><td>12 characters, alphabet of 32 (no 0, O, 1, I), shown <code>XXXX-XXXX-XXXX</code></td></tr>
+    <tr><td>Group limits</td><td>60 members · 50 events · 3000 expenses · 3000 payments · 1 MB state · 2000 bytes per entity</td></tr>
+    <tr><td>Backup reminder (no-account users)</td><td>after 14 days, snooze 3 days</td></tr>
+    <tr><td>Install banner snooze</td><td>7 days</td></tr>
+  </tbody>
+</table>
+
+<h2>A.5 Glossary</h2>
+<table>
+  <thead><tr><th style="width:24%">Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>sub</td><td>Google's unique id for an account; <code>'local'</code> for the no-account mode. Used as the key for all per-user data.</td></tr>
+    <tr><td>GIS</td><td>Google Identity Services — the browser library that issues access tokens.</td></tr>
+    <tr><td>App-data folder</td><td>A hidden Drive folder only this OAuth app can read (<code>drive.appdata</code>).</td></tr>
+    <tr><td>Lite mode</td><td>No-account session with only Records, Categories, Accounts (+ Profile).</td></tr>
+    <tr><td>Dirty / synced</td><td>"Local has unsent changes" / "the Drive version this device last saw".</td></tr>
+    <tr><td>Outbox</td><td>Queue of edits waiting to be saved to Drive (groups).</td></tr>
+    <tr><td>LWW</td><td>Last-write-wins: when two edits conflict, the newer timestamp wins.</td></tr>
+    <tr><td>Tombstone</td><td>A record kept with <code>deleted:true</code> so the deletion itself can be synced.</td></tr>
+    <tr><td>Minor units</td><td>The smallest currency unit (cents/paise) as integers.</td></tr>
+    <tr><td>PWA / Workbox / precache</td><td>Installable web app / Google's service-worker toolkit / files stored at install time for offline use.</td></tr>
+    <tr><td>Optimistic update</td><td>Change the screen first, confirm with storage/Drive afterwards.</td></tr>
+  </tbody>
+</table>
+<p class="small" style="margin-top:8mm">End of guide · PocketZen v1.0 · generated from <code>docs/architecture</code> with <code>npm run docs</code>.</p>

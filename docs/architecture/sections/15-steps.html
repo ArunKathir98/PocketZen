@@ -1,0 +1,70 @@
+<h1>15 · Step-by-step implementation</h1>
+<p>This is the order the app was actually built in, written so you can follow it to build the same thing. Each step says <b>what</b> to do, <b>which files</b> are involved and <b>why it comes at that point</b>.</p>
+
+<div class="step"><div class="n">1</div><div><h3>Scaffold, brand and PWA shell</h3>
+<p><b>Do:</b> <code>npm i react react-dom lucide-react</code>, dev deps <code>vite @vitejs/plugin-react vite-plugin-pwa sharp</code>. Turn the logo into a transparent PNG and the icon set with <code>scripts/make-icons.mjs</code>. Define colour tokens in <code>styles.css</code> from the logo gradient; write the inline theme script in <code>index.html</code>. Configure the PWA plugin (manifest + Workbox).<br>
+<b>Why first:</b> a consistent theme and an installable shell make every later screen look right from day one.</p></div></div>
+
+<div class="step"><div class="n">2</div><div><h3>Data model and local store</h3>
+<p><b>Do:</b> write <code>defaults.js</code> (<code>emptyData()</code>), then <code>store.jsx</code> with <code>commit</code>, <code>add/update/remove</code>, persisted to <code>localStorage</code> at first (moved to IndexedDB in step 11). Add <code>util.js</code> (ids, dates, money) and <code>calc.js</code> (balances, periods).<br>
+<b>Why:</b> every page depends on the document shape. Fix it early and keep it a single JSON object.</p></div></div>
+
+<div class="step"><div class="n">3</div><div><h3>Core pages</h3>
+<p><b>Do:</b> Records + <code>AddSheet</code>, Categories, Accounts, Budget, Reminders, Profile; shared <code>Modal</code>/<code>Toggle</code>/<code>Empty</code> in <code>ui.jsx</code>; bottom-nav/sidebar in <code>App.jsx</code>.<br>
+<b>Why:</b> proves the store API (<code>add/update/remove</code>) is enough for real screens before adding networking.</p></div></div>
+
+<div class="step"><div class="n">4</div><div><h3>Google sign-in and Drive sync</h3>
+<p><b>Do:</b> create the Google Cloud project and OAuth client; load GIS in <code>index.html</code>; write <code>google.js</code> (<code>requestToken</code>, <code>fetchProfile</code>, <code>driveLoad</code>, <code>driveSave</code>); add <code>login</code>, <code>pull</code>, <code>push</code>, <code>schedulePush</code>, dirty flag to the store; build <code>Login.jsx</code>.<br>
+<b>Why now:</b> the local-first store already works, so sync is "just" mirroring one document.</p></div></div>
+
+<div class="step"><div class="n">5</div><div><h3>PIN lock and keep-signed-in</h3>
+<p><b>Do:</b> <code>pin.js</code> (PBKDF2), <code>PinPad</code>, <code>PinLock</code>, auto-lock on hidden ≥ 60 s; session never expires. First "Forgot PIN" emailed a code through Gmail, later replaced by Google re-verification (chapter 8.6).<br>
+<b>Why:</b> it needs both the store and auth, so it comes after step 4.</p></div></div>
+
+<div class="step"><div class="n">6</div><div><h3>OAuth publication requirements</h3>
+<p><b>Do:</b> add <code>public/home.html</code> and <code>privacy.html</code>, branding, remove sensitive scopes so no verification is needed.<br>
+<b>Lesson:</b> request the smallest scopes you can. One sensitive scope would have blocked publishing.</p></div></div>
+
+<div class="step"><div class="n">7</div><div><h3>Polish pass for real screens</h3>
+<p><b>Do:</b> shrink type/controls, fix overlaps, screenshot at phone and desktop sizes; replace browser <code>confirm</code> with <code>DialogProvider</code>.<br>
+<b>Why:</b> a first design is usually too big on phones; checking screenshots catches layout bugs a linter cannot.</p></div></div>
+
+<div class="step"><div class="n">8</div><div><h3>Optional pages: EMIs, category details</h3>
+<p><b>Do:</b> <code>emi.js</code> + <code>Emi.jsx</code>; <code>CategoryDetail</code>; feature flags (<code>showEmi</code>, <code>showReminders</code>) with toggles in Profile; <code>TABS</code> gets a 5th "flag" element.<br>
+<b>Why flags:</b> a simple app stays simple; power features are opt-in.</p></div></div>
+
+<div class="step"><div class="n">9</div><div><h3>Notifications, install prompt, sharing</h3>
+<p><b>Do:</b> <code>notify.js</code>, <code>sw-notify.js</code>, <code>install.js</code>, banners, <code>NotificationsCard</code>; share card with WhatsApp text and poster; feedback form link in <code>config.js</code>; poster generator.<br>
+<b>Lesson:</b> browsers can't ask for notification permission on load, can't pick a sound, and can't alert a locked phone; design the UI honestly around that.</p></div></div>
+
+<div class="step"><div class="n">10</div><div><h3>Local-only mode, backups, recovery code</h3>
+<p><b>Do:</b> <code>idb.js</code> and move the store to IndexedDB (with one-time migration); <code>loginLocal</code>; <code>backup.js</code> (AES-GCM) + <code>BackupModal</code>; recovery code in <code>pin.js</code>; <code>CloudCard</code> + <code>switchToGoogle</code>/<code>disconnectGoogle</code>; <code>merge.js</code>.<br>
+<b>Why:</b> having a clean "session mode" in the store made this additive rather than a rewrite.</p></div></div>
+
+<div class="step"><div class="n">11</div><div><h3>Loans &amp; people</h3>
+<p><b>Do:</b> design the event model first, write <code>loans.js</code> and its tests (the maths must be right before any UI), then <code>Loans.jsx</code>, reminders for interest days, optional account recording, statements.<br>
+<b>Why events:</b> any correction stays consistent (chapter 9.4).</p></div></div>
+
+<div class="step"><div class="n">12</div><div><h3>Lite mode gating</h3>
+<p><b>Do:</b> <code>LITE_TABS</code> in <code>App.jsx</code>, hide Google-only settings in <code>User.jsx</code>, skip the reminder scheduler for local sessions.<br>
+<b>Why:</b> the product decision was "no account = simple tracker; Google = full app"; one set filter implements it.</p></div></div>
+
+<div class="step"><div class="n">13</div><div><h3>Groups: server prototype → Drive-hosted</h3>
+<p><b>Do (final design):</b> <code>groupState.js</code> (ops, LWW, splits, balances, settle-up), <code>useGroup.js</code> (cache, polling, outbox), group file functions in <code>google.js</code>, <code>Groups.jsx</code>, <code>GroupView.jsx</code>, <code>PublicGroup.jsx</code>, <code>groupPdf.js</code>, <code>pendingJoin.js</code>.<br>
+<b>Lesson:</b> the server version worked, but it contradicted the product's promise; choosing the simpler "admin edits, others view" model deleted the hardest problem (concurrent writers) and the server with it.</p></div></div>
+
+<div class="step"><div class="n">14</div><div><h3>Hardening from real-use bug reports</h3>
+<p><b>Do:</b> (a) read-merge-write on push + re-check Drive on foreground → no more overwritten data; (b) cache the token + forbid background sign-in windows; (c) sharing switch + clear API-key error messages; (d) remove unused code; (e) update README, privacy policy, home page, poster.<br>
+<b>Lesson:</b> every item here was found by a user or by a reproducing test — write the failing test <i>first</i>, then fix.</p></div></div>
+
+<h2>15.1 "If I had to rebuild it in a weekend" checklist</h2>
+<ol>
+  <li>Vite + React + PWA plugin; tokens and theme.</li>
+  <li><code>emptyData()</code>, <code>store.jsx</code> with <code>commit</code> and IndexedDB.</li>
+  <li>Records, Categories, Accounts pages with one reusable <code>Modal</code>.</li>
+  <li>Local-only session + backup file. <b>You already have a useful app here.</b></li>
+  <li>Add Google token flow, <code>driveLoad/driveSave</code>, push/pull with dirty flag.</li>
+  <li>Add read-merge-write and the token cache <i>immediately</i> (don't repeat our bugs).</li>
+  <li>PIN lock; notifications; optional pages one at a time, each with a pure module and tests.</li>
+  <li>Groups last, as Drive files with an admin and view-only links.</li>
+</ol>

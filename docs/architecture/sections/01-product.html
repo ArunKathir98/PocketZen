@@ -1,0 +1,47 @@
+<h1>1 · The product and its constraints</h1>
+
+<h2>1.1 What PocketZen does</h2>
+<table>
+  <thead><tr><th style="width:24%">Page</th><th>What the user can do</th><th style="width:22%">Available to</th></tr></thead>
+  <tbody>
+    <tr><td>Records</td><td>Add income, expense and transfers; daily / weekly / monthly views with totals; edit or delete</td><td>Everyone</td></tr>
+    <tr><td>Categories</td><td>Manage income and expense categories; tap one to see all its transactions by period</td><td>Everyone</td></tr>
+    <tr><td>Accounts</td><td>Bank, wallet, cash, investment accounts with live balances</td><td>Everyone</td></tr>
+    <tr><td>Budget</td><td>Monthly limit per expense category; remaining balance shown while adding an expense</td><td>Google users</td></tr>
+    <tr><td>EMIs</td><td>Ongoing instalment loans: total, months, pending months, payments, schedule</td><td>Google users (optional page)</td></tr>
+    <tr><td>Loans &amp; people</td><td>Money lent or borrowed with fixed, simple, compound or manual interest; statements</td><td>Google users (optional page)</td></tr>
+    <tr><td>Groups</td><td>Split expenses with friends; settle-up suggestions; PDF summary; view-only share link</td><td>Google users (optional page)</td></tr>
+    <tr><td>Reminders</td><td>Recurring bill reminders and a daily "add today's expenses" nudge, with sound</td><td>Google users (optional page)</td></tr>
+    <tr><td>Profile</td><td>Theme, currency, PIN, notifications, backup and restore, share, log out</td><td>Everyone</td></tr>
+  </tbody>
+</table>
+
+<h2>1.2 Two ways to use the app</h2>
+<!--diagram:modes-->
+<table>
+  <thead><tr><th style="width:22%"></th><th>Google session</th><th>Local ("lite") session</th></tr></thead>
+  <tbody>
+    <tr><td>Identity</td><td><code>session = { sub, email, name, picture, mode:'google' }</code></td><td><code>session = { sub:'local', mode:'local' }</code></td></tr>
+    <tr><td>Data location</td><td>IndexedDB + Drive app-data file</td><td>IndexedDB only</td></tr>
+    <tr><td>Pages</td><td>All; optional ones are toggled in Profile → Pages</td><td>Records, Categories, Accounts, Profile</td></tr>
+    <tr><td>Backup</td><td>Automatic (Drive)</td><td>Backup file, optional password; reminder after 14 days</td></tr>
+    <tr><td>Forgot PIN</td><td>Re-verify with Google</td><td>One-time recovery code</td></tr>
+  </tbody>
+</table>
+
+<h2>1.3 The constraints that shaped every decision</h2>
+<table>
+  <thead><tr><th style="width:30%">Constraint</th><th>Consequence in the design</th></tr></thead>
+  <tbody>
+    <tr><td>"Your data stays yours" — no server holding financial data</td><td>Data lives in the user's own Google Drive or on their device. The app is a static site. Even shared groups are files in the admin's Drive.</td></tr>
+    <tr><td>Free to run</td><td>Cloudflare Workers static assets (free), Google Drive (user's own quota), no database, no paid services.</td></tr>
+    <tr><td>Works like a phone app</td><td>PWA: manifest, service worker, install prompt, offline cache, responsive layout from phone to monitor.</td></tr>
+    <tr><td>Some users won't use Google</td><td>Local-only lite mode with encrypted backups and a clean upgrade path to Drive.</td></tr>
+    <tr><td>No backend means no refresh tokens, no push server, no secrets</td><td>Short-lived browser tokens cached carefully; reminders only fire while the app can run; only public identifiers (client id, API key) ship in the bundle.</td></tr>
+    <tr><td>Future maintainers are mostly front-end developers</td><td>Plain React + Context, hand-written CSS, almost no dependencies, business logic isolated in pure functions.</td></tr>
+  </tbody>
+</table>
+
+<div class="why">The single most important decision is <b>"no backend"</b>. It removes servers, accounts, databases, GDPR duties and running costs,
+and it makes the privacy promise literally true. The price is that everything a server normally does (sync, conflict handling,
+scheduling, sharing) has to be solved in the browser. Chapters 7, 8, 10 and 12 show how.</div>

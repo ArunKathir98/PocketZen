@@ -1,0 +1,59 @@
+<h1>11 · The UI layer</h1>
+
+<h2>11.1 Styling system (<code>styles.css</code>)</h2>
+<ul>
+  <li><b>Design tokens</b> as CSS custom properties on <code>:root</code>, taken from the logo's mint-to-teal gradient: <code>--g1 #8fe69a</code>, <code>--g2 #1ccbb0</code>, <code>--g3 #03a7c3</code>,
+      <code>--grad</code>, plus <code>--ink</code>, <code>--muted</code>, <code>--surface</code>, <code>--line</code>, <code>--income</code>, <code>--expense</code>.</li>
+  <li><b>Dark mode</b>: <code>:root[data-theme='dark']</code> overrides the tokens. The attribute is set before paint by the inline script in <code>index.html</code>, and changed by <code>applyTheme()</code> in <code>User.jsx</code> (light / dark / auto follows the OS).</li>
+  <li><b>No component library</b>: a small vocabulary of classes — <code>.card</code>, <code>.list</code>/<code>.item</code>, <code>.btn</code> (<code>.primary .ghost .danger .sm</code>), <code>.chip</code>, <code>.seg</code> (segmented control), <code>.field</code>/<code>.input</code>, <code>.hero</code>, <code>.banner</code>, <code>.bar</code>, <code>.toggle</code>.</li>
+  <li><b>Sizes</b> were tuned for real screens: 14 px base text, 34 px icon buttons, 52 px floating button, compact lists. A visual pass on 390×844 and 1440×900 screenshots caught overlaps and oversized controls.</li>
+  <li><b>Text selection is disabled</b> app-wide (<code>user-select: none</code>) for an app-like feel; inputs, textareas, selects and elements with <code>.selectable</code> (recovery code, group id) stay selectable.</li>
+</ul>
+
+<h2>11.2 Responsive layout</h2>
+<table>
+  <thead><tr><th style="width:24%">Width</th><th>Navigation</th><th>Content</th></tr></thead>
+  <tbody>
+    <tr><td>&lt; 820 px (phones)</td><td>Fixed <b>bottom bar</b> (scrolls sideways when more than six tabs); floating add button above it</td><td>Single column, 14 px padding, safe-area insets for notches</td></tr>
+    <tr><td>≥ 820 px (tablet, laptop)</td><td>Left <b>sidebar</b> rail, 76 px, icons + small labels</td><td>Centered page, max 1080 px</td></tr>
+    <tr><td>≥ 1280 px (monitor)</td><td>Sidebar widens to 200 px with full labels and the sync status text</td><td>Content narrows to max 980 px so lines stay readable</td></tr>
+  </tbody>
+</table>
+<p>The same <code>tabs</code> array renders both navigations, so they can never disagree.</p>
+
+<h2>11.3 Modals and dialogs</h2>
+<ul>
+  <li><b><code>Modal</code></b> (<code>ui.jsx</code>): bottom sheet on phones, centred card on desktop. A module-level <i>stack</i> ensures that when several modals are open (person → loan → payment form) only the topmost reacts to
+      Escape, and body scrolling stays locked until the last one closes. The callback is kept in a ref so the effect registers once and ordering never gets scrambled by re-renders.</li>
+  <li><b>Stacking order</b> is simply DOM order. A page that opens a form <i>from inside</i> another modal must render that form <b>after</b> the parent modal. (A real bug: "Add loan" opened behind the person screen until the render order was swapped.)</li>
+  <li><b>Dialogs</b> (<code>dialog.jsx</code>) are promise-based and sit above modals (z-index 120).</li>
+</ul>
+
+<h2>11.4 Patterns used across pages</h2>
+<table>
+  <thead><tr><th style="width:26%">Pattern</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Form modal with Save in the footer</td><td>every create/edit flow</td></tr>
+    <tr><td>Segmented control for modes</td><td>Records periods, Add sheet type, interest period</td></tr>
+    <tr><td>Chip groups for single/multi select</td><td>accounts, categories, group payer/split, interest type</td></tr>
+    <tr><td>"Hero" summary card with gradient</td><td>Records, Accounts, Budget, EMIs, Loans, Groups</td></tr>
+    <tr><td>Empty state with a call to action</td><td>every list page</td></tr>
+    <tr><td>Optimistic updates</td><td>all writes (state changes first, storage and Drive follow)</td></tr>
+    <tr><td>Inline validation messages (<code>role="alert"</code>)</td><td>forms; errors are explained in plain words, not codes</td></tr>
+  </tbody>
+</table>
+
+<h2>11.5 Accessibility basics included</h2>
+<ul>
+  <li>Icon-only buttons have <code>aria-label</code>; toggles are <code>role="switch"</code> with <code>aria-checked</code>; modals have <code>role="dialog"</code> and <code>aria-modal</code>; dialogs use <code>role="alertdialog"</code>.</li>
+  <li>Visible focus rings (<code>:focus-visible</code>), <code>prefers-reduced-motion</code> disables animations, colour is never the only signal (labels like "owes/gets/over by").</li>
+  <li>The PIN pad also accepts the physical keyboard.</li>
+</ul>
+
+<h2>11.6 Adding a page — the recipe</h2>
+<ol>
+  <li>Create <code>src/pages/MyPage.jsx</code>; read data with <code>useApp()</code>, mutate with <code>add/update/remove</code>.</li>
+  <li>Put calculations in a pure <code>src/lib/mything.js</code> and unit-test them.</li>
+  <li>Add the new collection to <code>emptyData()</code>, to the array list in <code>normalize()</code> (<code>store.jsx</code>), and to <code>mergeData</code> (<code>merge.js</code>) — otherwise import/merge/sync will silently drop it.</li>
+  <li>Add a row to <code>TABS</code> in <code>App.jsx</code> (with a settings flag if it is optional) and a toggle in <code>User.jsx</code>; add it to <code>LITE_TABS</code> only if lite users should have it.</li>
+</ol>

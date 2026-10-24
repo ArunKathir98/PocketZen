@@ -1,0 +1,44 @@
+<h1>3 · Architecture at a glance</h1>
+
+<h2>3.1 The seven layers</h2>
+<p>Think of the code as seven layers. Each layer mostly talks to the one directly below it, which is what keeps the app understandable.</p>
+<!--diagram:layers-->
+<p class="caption">Figure 3.1 — Layers of PocketZen. Most pages only call the store or a pure function. The group screens (Groups, GroupView) and CloudCard also call google.js and the IndexedDB helper directly, because group data is separate from the personal document.</p>
+
+<h2>3.2 One document, three places</h2>
+<p>All personal data is one JSON object (the "document"). It is kept in up to three places, and understanding which is which
+explains most of the code:</p>
+<table>
+  <thead><tr><th style="width:24%">Place</th><th>Holds</th><th style="width:26%">Written by</th></tr></thead>
+  <tbody>
+    <tr><td>React state (<code>data</code>)</td><td>The live copy the UI renders. Mirrored in a ref (<code>dataRef</code>) so async code always sees the latest value.</td><td><code>commit()</code></td></tr>
+    <tr><td>IndexedDB <code>data:&lt;sub&gt;</code></td><td>The durable on-device copy. The app starts from it, so it works offline and loads instantly.</td><td><code>persistLocal()</code> after every commit</td></tr>
+    <tr><td>Drive <code>pocketzen-data.json</code></td><td>The cloud copy (Google users only), in the hidden app-data folder. Lets several devices share data.</td><td><code>push()</code> / read by <code>pull()</code></td></tr>
+  </tbody>
+</table>
+<div class="why"><b>Local first.</b> The UI never waits for the network. A change shows immediately, is saved to IndexedDB in milliseconds, and Drive
+catches up in the background. If Google is unreachable the app keeps working and syncs later.</div>
+
+<h2>3.3 Request and data flow in one picture</h2>
+<!--diagram:write-->
+<p class="caption">Figure 3.2 — What happens when the user saves a record (details in chapters 6 and 7).</p>
+
+<h2>3.4 Separation of concerns</h2>
+<table>
+  <thead><tr><th style="width:26%">Kind of code</th><th>Rule</th><th style="width:30%">Examples</th></tr></thead>
+  <tbody>
+    <tr><td>Pure domain logic</td><td>No React, no DOM, no storage. Input → output. Unit-testable in plain Node.</td><td><code>calc.js, loans.js, emi.js, groupState.js, merge.js, backup.js, pin.js</code></td></tr>
+    <tr><td>Platform services</td><td>Talk to the browser or Google. May use <code>window</code>, <code>fetch</code>, IndexedDB.</td><td><code>google.js, idb.js, notify.js, install.js, groupPdf.js</code></td></tr>
+    <tr><td>State</td><td>React Context/hooks that glue services and logic together.</td><td><code>store.jsx, useGroup.js, dialog.jsx</code></td></tr>
+    <tr><td>UI</td><td>Render and collect input. No business rules; call the store or a pure function.</td><td><code>pages/*, components/*</code></td></tr>
+  </tbody>
+</table>
+<div class="adv">When a bug is about <i>numbers</i> (interest, balances, splits) you only ever open a pure module. When it is about <i>sync or sign-in</i> you open
+<code>store.jsx</code> / <code>google.js</code>. When it is about <i>looks</i> you open a page and <code>styles.css</code>.</div>
+
+<h2>3.5 Two kinds of shared state</h2>
+<ul>
+  <li><b>Personal data</b> (accounts, records, budgets, EMIs, loans, reminders…): one document per user, managed by <code>store.jsx</code>, synced as a whole file.</li>
+  <li><b>Group data</b>: one document per group, a separate file in the admin's Drive, managed by <code>useGroup.js</code> with its own cache and outbox.
+      They are kept separate because they have different owners, audiences and sync rules (chapter 10).</li>
+</ul>

@@ -1,0 +1,59 @@
+:root { --ink:#0b2b33; --muted:#5c7780; --line:#d6e4e6; --brand:#0a9fae; --grad:linear-gradient(135deg,#8fe69a,#1ccbb0 55%,#03a7c3); }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; color: var(--ink); font: 10.4pt/1.55 'Segoe UI', Roboto, Arial, sans-serif; }
+@page { size: A4; }
+
+h1 { font-size: 21pt; letter-spacing: -0.02em; margin: 0 0 6mm; padding-top: 2mm; break-before: page; border-top: 3mm solid transparent; border-image: var(--grad) 1; padding-top: 4mm; }
+h1.first { break-before: auto; }
+h2 { font-size: 13.5pt; margin: 8mm 0 2.5mm; color: #07404d; break-after: avoid; }
+h3 { font-size: 11pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+p { margin: 0 0 3mm; }
+ul, ol { margin: 0 0 3mm 5mm; padding-left: 4mm; }
+li { margin: 0.8mm 0; }
+a { color: var(--brand); text-decoration: none; }
+code { font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace; font-size: 8.8pt; background: #eef5f6; padding: 0.3mm 1.2mm; border-radius: 1.2mm; }
+pre { font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace; font-size: 8pt; line-height: 1.45; background: #0f2a31; color: #dff3f0; padding: 3.2mm 4mm; border-radius: 2.5mm; overflow: hidden; white-space: pre-wrap; break-inside: avoid; margin: 0 0 4mm; }
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.k { color: #8fe69a; } .c { color: #7fa3aa; } .s { color: #ffd479; }
+
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 4.5mm; font-size: 9pt; break-inside: auto; }
+thead { display: table-header-group; }
+th { text-align: left; background: #0b2b33; color: #fff; padding: 1.8mm 2.4mm; font-weight: 600; }
+td { padding: 1.7mm 2.4mm; border-bottom: 0.3mm solid var(--line); vertical-align: top; }
+tr { break-inside: avoid; }
+tbody tr:nth-child(even) td { background: #f6fbfa; }
+td:first-child { font-weight: 600; }
+
+figure.diagram { margin: 3mm 0 5mm; padding: 3mm; border: 0.3mm solid var(--line); border-radius: 3mm; background: #fbfefe; break-inside: avoid; }
+figure.diagram svg { display: block; max-height: 205mm; }
+figcaption, .caption { font-size: 8.8pt; color: var(--muted); margin-top: 1.5mm; text-align: center; }
+
+.note, .why, .adv, .warn, .tip { border-left: 1.4mm solid var(--brand); background: #eaf8f7; padding: 2.4mm 3.4mm; border-radius: 0 2mm 2mm 0; margin: 0 0 4mm; break-inside: avoid; }
+.note::before, .why::before, .adv::before, .warn::before, .tip::before { display: block; font-weight: 700; font-size: 8.4pt; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.8mm; }
+.note::before { content: 'Note'; color: #0a7f94; }
+.why { border-color: #6366f1; background: #eef0ff; } .why::before { content: 'Why this way'; color: #4547c9; }
+.adv { border-color: #0fa97e; background: #e6f8ef; } .adv::before { content: 'Advantage'; color: #0b8f68; }
+.warn { border-color: #f59e0b; background: #fff6e0; } .warn::before { content: 'Watch out'; color: #b06c00; }
+.tip { border-color: #ec4899; background: #fff0f7; } .tip::before { content: 'Tip'; color: #b3246f; }
+
+.cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; }
+.cover .band { height: 70mm; border-radius: 6mm; background: var(--grad); display: flex; align-items: center; padding: 0 10mm; gap: 8mm; margin-bottom: 12mm; }
+.cover .band img { height: 42mm; }
+.cover .band h1 { all: unset; font-size: 34pt; font-weight: 900; letter-spacing: -0.03em; color: #04323d; }
+.cover .band p { margin: 0; font-size: 13pt; font-weight: 700; color: #04323d; }
+.cover h2 { font-size: 20pt; margin: 0 0 3mm; color: var(--ink); }
+.cover .meta { color: var(--muted); font-size: 10pt; }
+.cover .for { margin-top: 10mm; padding: 4mm 5mm; background: #eef5f6; border-radius: 3mm; }
+
+.toc { columns: 2; column-gap: 10mm; font-size: 10pt; }
+.toc div { break-inside: avoid; margin: 0.8mm 0; }
+.toc b { color: var(--brand); display: inline-block; width: 7mm; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.chip { display: inline-block; background: #e3f4f2; border-radius: 99px; padding: 0.4mm 2.4mm; font-size: 8.6pt; font-weight: 600; margin: 0.4mm 0.6mm 0.4mm 0; }
+.tree { font-family: 'Cascadia Mono', Consolas, monospace; font-size: 8.2pt; line-height: 1.5; }
+.small { font-size: 9pt; color: var(--muted); }
+.step { display: grid; grid-template-columns: 11mm 1fr; gap: 3mm; margin: 0 0 3.5mm; break-inside: avoid; }
+.step .n { width: 9mm; height: 9mm; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 10pt; }
+.step h3 { margin: 0 0 0.8mm; }
+.step p { margin: 0 0 1.5mm; }

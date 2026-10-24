@@ -1,0 +1,70 @@
+<h1>5 · Startup and routing flow</h1>
+<p>There is no router library. "Routing" is a chain of early returns in <code>App.jsx</code>. Read this chapter once and you know what the user
+sees in every situation.</p>
+
+<h2>5.1 What runs before React</h2>
+<div class="step"><div class="n">1</div><div>
+  <h3><code>index.html</code></h3>
+  <p>An inline script reads <code>localStorage['pz:theme']</code> and sets <code>&lt;html data-theme="light|dark"&gt;</code>
+  <i>before</i> first paint, so there is no white flash in dark mode. Then it loads Google Identity Services
+  (<code>accounts.google.com/gsi/client</code>, <code>async defer</code>) and the module <code>/src/main.jsx</code>.</p>
+</div></div>
+<div class="step"><div class="n">2</div><div>
+  <h3><code>main.jsx</code></h3>
+  <p>In order: <code>capturePendingJoin()</code> (if the URL has <code>?view=&lt;id&gt;</code> store the id in <code>pz:pendingJoin</code> and clean the address bar);
+  import <code>install.js</code> (starts listening for <code>beforeinstallprompt</code> before React mounts, because the event can fire early);
+  register one-time <code>pointerdown</code>/<code>keydown</code> listeners that unlock Web Audio (browsers only allow sound after a gesture);
+  <code>registerSW({ immediate: true })</code>; finally render
+  <code>&lt;StrictMode&gt;&lt;AppProvider&gt;&lt;DialogProvider&gt;&lt;App /&gt;&lt;/DialogProvider&gt;&lt;/AppProvider&gt;&lt;/StrictMode&gt;</code>.</p>
+</div></div>
+<div class="step"><div class="n">3</div><div>
+  <h3><code>AppProvider</code> (store.jsx)</h3>
+  <p>Reads <code>pz:session</code> synchronously. If there is a session it loads that user's document from IndexedDB (asynchronously; one-time
+  migration from the old localStorage copy), sets <code>locked = !!data.pin</code> and finally <code>ready = true</code>. Without a session
+  <code>ready</code> is immediately true.</p>
+</div></div>
+
+<h2>5.2 The decision chain in <code>App.jsx</code></h2>
+<!--diagram:boot-->
+<p class="caption">Figure 5.1 — Which screen is shown. Order matters: the PIN comes before everything else for signed-in users.</p>
+<table>
+  <thead><tr><th style="width:5%">#</th><th style="width:34%">Condition</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><code>!ready</code></td><td>Splash with the logo (data still loading from IndexedDB).</td></tr>
+    <tr><td>2</td><td><code>session &amp;&amp; locked</code></td><td><code>PinLock</code>.</td></tr>
+    <tr><td>3</td><td>group link pending, sharing enabled, and (<code>!session</code> or local mode)</td><td><code>PublicGroup</code> — read-only group, no sign-in.</td></tr>
+    <tr><td>4</td><td><code>!session</code></td><td><code>Login</code>.</td></tr>
+    <tr><td>5</td><td>otherwise</td><td>App shell: sidebar (≥ 820 px) or bottom bar (&lt; 820 px) plus the page for the selected <code>tab</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>5.3 Which tabs exist</h2>
+<pre><code><span class="k">const</span> TABS = [
+  [<span class="s">'records'</span>,    <span class="s">'Records'</span>,    ListChecks,  Records],
+  [<span class="s">'categories'</span>, <span class="s">'Categories'</span>, LayoutGrid,  Categories],
+  [<span class="s">'accounts'</span>,   <span class="s">'Accounts'</span>,   Landmark,    Accounts],
+  [<span class="s">'budget'</span>,     <span class="s">'Budget'</span>,     PiggyBank,   Budget],
+  [<span class="s">'emi'</span>,        <span class="s">'EMIs'</span>,       HandCoins,   Emi,       <span class="s">'showEmi'</span>],
+  [<span class="s">'groups'</span>,     <span class="s">'Groups'</span>,     Users,       Groups,    <span class="s">'showGroups'</span>],
+  [<span class="s">'loans'</span>,      <span class="s">'Loans'</span>,      Handshake,   Loans,     <span class="s">'showLoans'</span>],
+  [<span class="s">'reminders'</span>,  <span class="s">'Reminders'</span>,  BellRing,    Reminders, <span class="s">'showReminders'</span>],
+  [<span class="s">'user'</span>,       <span class="s">'Profile'</span>,    CircleUserRound, User],
+]
+<span class="c">// lite (local) mode only gets these four:</span>
+<span class="k">const</span> LITE_TABS = <span class="k">new</span> Set([<span class="s">'records'</span>, <span class="s">'categories'</span>, <span class="s">'accounts'</span>, <span class="s">'user'</span>])
+<span class="k">const</span> tabs = TABS.filter(t =&gt; isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]])</code></pre>
+<p>The fifth array element is the settings flag that switches an optional page on. If the saved <code>tab</code> is no longer allowed (for example after
+disabling a page) the app falls back to Records.</p>
+
+<h2>5.4 Effects that live in <code>App.jsx</code></h2>
+<ul>
+  <li><b>Remember the tab</b> in <code>pz:tab</code>.</li>
+  <li><b>Invite link while signed in with Google</b>: enables the Groups page and jumps to it (the Join dialog then reads the pending id).</li>
+  <li><b>Reminder scheduler</b>: <code>checkDue(data)</code> immediately, every 30 s, and whenever the tab becomes visible again; fired reminders become toasts.
+      Skipped for locked sessions and local mode.</li>
+</ul>
+<div class="why"><b>Why early returns instead of a router?</b> The app is a single screen with tabs. A router would add a dependency and
+URL/rewrite concerns for no benefit, and every "state of the world" (loading, locked, public, logged out) is a different <i>whole screen</i> anyway, which early
+returns express most clearly.</div>
+<div class="warn"><b>StrictMode.</b> In development React runs effects twice. Every effect that starts something (loading data, polling) cleans up after itself
+(an <code>alive</code> flag or <code>clearInterval</code>), so the double run is harmless. Keep that discipline when adding effects.</div>

@@ -1,0 +1,82 @@
+<h1>4 · Project map (every file)</h1>
+
+<pre><code><span class="c"># repository root</span>
+index.html            <span class="c"># theme-before-paint script, loads Google Identity Services, mounts #root</span>
+vite.config.js        <span class="c"># React plugin + PWA plugin (manifest, Workbox, importScripts)</span>
+wrangler.jsonc        <span class="c"># Cloudflare: serve dist/ as static assets (+ retire an old Durable Object)</span>
+worker/index.js       <span class="c"># 3-line Worker that hands every request to the static assets</span>
+.env.example          <span class="c"># VITE_GOOGLE_CLIENT_ID, VITE_GOOGLE_API_KEY</span>
+public/               <span class="c"># icons, sw-notify.js, home.html, privacy.html, share-poster.jpg</span>
+scripts/              <span class="c"># make-icons.mjs, poster/*, docs/* (this PDF)</span>
+src/
+  main.jsx            <span class="c"># boot: capture invite link, install listener, audio unlock, SW, providers</span>
+  App.jsx             <span class="c"># the router: splash → PIN → public group → login → app shell + tabs</span>
+  config.js           <span class="c"># feedback form URL, GROUP_SHARING switch</span>
+  styles.css          <span class="c"># design tokens, light/dark, layout, every component style</span>
+  lib/                <span class="c"># state, services and pure logic (below)</span>
+  pages/              <span class="c"># one file per screen</span>
+  components/         <span class="c"># reusable pieces</span>
+  assets/             <span class="c"># logo.png (transparent), logo-source.jpg</span></code></pre>
+
+<h2>4.1 <code>src/lib</code> — state, services, logic</h2>
+<table>
+  <thead><tr><th style="width:21%">File</th><th style="width:11%">Kind</th><th>Responsibility</th></tr></thead>
+  <tbody>
+    <tr><td>store.jsx</td><td>State</td><td><code>AppProvider</code> and <code>useApp()</code>: session, data, lock, sync status; <code>commit</code>, <code>push</code>, <code>pull</code>, login, logout, mode switching.</td></tr>
+    <tr><td>defaults.js</td><td>Data</td><td><code>emptyData()</code> shape, default categories/accounts/settings, account types, currencies, colours, emoji list.</td></tr>
+    <tr><td>idb.js</td><td>Service</td><td>Promise key-value store on IndexedDB with a localStorage fallback.</td></tr>
+    <tr><td>google.js</td><td>Service</td><td>Token handling (cache, scopes, renewal), profile, Drive app-data load/save, group file create/share/read/write/delete, public read.</td></tr>
+    <tr><td>merge.js</td><td>Logic</td><td><code>mergeData(base, inc)</code> — combine two documents without duplicates; <code>hasUserData</code>.</td></tr>
+    <tr><td>calc.js</td><td>Logic</td><td>Account balances, period ranges and labels, totals, per-category monthly spend, day grouping.</td></tr>
+    <tr><td>emi.js</td><td>Logic</td><td>EMI statistics (paid, pending, remaining, next due) and upcoming schedule.</td></tr>
+    <tr><td>loans.js</td><td>Logic</td><td>Loan interest engine (<code>loanStats</code>), interest-first split, person totals, statement text.</td></tr>
+    <tr><td>groupState.js</td><td>Logic</td><td>Group data model: ops + last-write-wins merge, validation limits, equal split, balances, settle-up algorithm, money formatting.</td></tr>
+    <tr><td>useGroup.js</td><td>State</td><td>Live view of one group: cache, polling, outbox, admin/viewer roles.</td></tr>
+    <tr><td>groupPdf.js</td><td>Service</td><td>Draws summary pages on canvas and writes a PDF; share-or-download helper.</td></tr>
+    <tr><td>backup.js</td><td>Logic</td><td>Build, encrypt, parse and save backup files.</td></tr>
+    <tr><td>pin.js</td><td>Logic</td><td>PIN hashing/verification and the one-time recovery code.</td></tr>
+    <tr><td>reminders.js</td><td>Logic</td><td>Recurrence maths, <code>checkDue()</code> for bills, loans and the daily nudge.</td></tr>
+    <tr><td>notify.js</td><td>Service</td><td>Chime, vibration, system notifications, <code>fireReminder()</code>.</td></tr>
+    <tr><td>install.js</td><td>Service</td><td>Captures <code>beforeinstallprompt</code>; <code>useInstall()</code> hook.</td></tr>
+    <tr><td>pendingJoin.js</td><td>Service</td><td>Remembers a <code>?view=</code> group link across sign-in.</td></tr>
+    <tr><td>util.js</td><td>Helpers</td><td>ids, date helpers, money formatting, download helper.</td></tr>
+  </tbody>
+</table>
+
+<h2>4.2 <code>src/pages</code> — screens</h2>
+<table>
+  <thead><tr><th style="width:22%">File</th><th>Screen</th></tr></thead>
+  <tbody>
+    <tr><td>Login.jsx</td><td>Welcome + "Continue with Google" / "Continue without an account".</td></tr>
+    <tr><td>PinLock.jsx</td><td>PIN pad and both "Forgot PIN" flows (Google re-verify, local recovery code).</td></tr>
+    <tr><td>Records.jsx</td><td>Totals hero, day/week/month switch, grouped list, add button.</td></tr>
+    <tr><td>Categories.jsx</td><td>Income/expense tabs, add/edit/delete, opens category detail.</td></tr>
+    <tr><td>Accounts.jsx</td><td>Account cards with computed balances.</td></tr>
+    <tr><td>Budget.jsx</td><td>Per-category monthly limits with progress.</td></tr>
+    <tr><td>Emi.jsx</td><td>Ongoing/completed EMIs, pay flow, detail view with schedule and history.</td></tr>
+    <tr><td>Loans.jsx</td><td>People list, person detail, loan detail, payment/terms forms, statements.</td></tr>
+    <tr><td>Groups.jsx</td><td>My groups, create, join (view link).</td></tr>
+    <tr><td>GroupView.jsx</td><td>One group: expenses, payments, people, events, settle-up, summary/PDF, invite. Read-only for viewers.</td></tr>
+    <tr><td>PublicGroup.jsx</td><td>Wrapper that shows a group to someone with no session.</td></tr>
+    <tr><td>Reminders.jsx</td><td>Bill reminders list and form.</td></tr>
+    <tr><td>User.jsx</td><td>Profile: backup &amp; sync, theme, preferences, notifications, pages, security, data, share, log out.</td></tr>
+  </tbody>
+</table>
+
+<h2>4.3 <code>src/components</code> — reusable pieces</h2>
+<table>
+  <thead><tr><th style="width:24%">File</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>ui.jsx</td><td><code>Modal</code> (stack-aware), <code>Toggle</code>, <code>Empty</code>, <code>Logo</code>, Google "G" icon.</td></tr>
+    <tr><td>dialog.jsx</td><td><code>DialogProvider</code>/<code>useDialog()</code> — promise-based <code>confirm</code>, <code>alert</code>, <code>choose</code> that replace browser pop-ups.</td></tr>
+    <tr><td>AddSheet.jsx</td><td>Add/edit a record (income, expense, transfer) incl. remaining-budget hint.</td></tr>
+    <tr><td>CategoryDetail.jsx</td><td>All transactions of one category with period filter and budget bar.</td></tr>
+    <tr><td>PinPad.jsx</td><td>Keypad + dots, keyboard support, shake on wrong PIN.</td></tr>
+    <tr><td>CloudCard.jsx</td><td>Local ⇄ Google switching UI (connect, merge choices, disconnect).</td></tr>
+    <tr><td>BackupModal.jsx / RecoveryModal.jsx</td><td>Create (optionally encrypted) backups; show the recovery code once.</td></tr>
+    <tr><td>NotificationsCard.jsx</td><td>Permission status, sound toggle, test buttons.</td></tr>
+    <tr><td>ShareCard.jsx</td><td>Share the app (message + poster), WhatsApp, copy, feedback form.</td></tr>
+    <tr><td>Banners.jsx</td><td><code>InstallBanner</code>, <code>NotifyBanner</code>, <code>BackupBanner</code>.</td></tr>
+    <tr><td>LocalWelcome.jsx</td><td>One-time tip shown to people who start without an account.</td></tr>
+  </tbody>
+</table>

@@ -1,0 +1,44 @@
+<h1>14 · Testing approach</h1>
+
+<p>The repository has no test runner configured yet. During development, correctness was checked with <b>throw-away scripts</b> in two layers. Describing them here so you can reproduce or formalise them.</p>
+
+<h2>14.1 Layer 1 — pure-logic tests (Node)</h2>
+<p>Because the domain modules are plain functions, they can be bundled (the project's own Rolldown, since the source uses extension-less imports) and exercised with <code>node:assert</code>.</p>
+<table>
+  <thead><tr><th style="width:24%">Module</th><th>What was asserted</th></tr></thead>
+  <tbody>
+    <tr><td>merge, backup, pin</td><td>Same-named accounts/categories unify; ids remapped; PIN excluded from backups; encrypted backup hides content, wrong password rejected; recovery code format and forgiving input.</td></tr>
+    <tr><td>loans</td><td>None/fixed/simple (monthly and yearly)/compound/manual; mid-way rate change; partial month (45 days); top-ups; repayments; fixed interest stops when principal is cleared; settled detection; person totals; statement text.</td></tr>
+    <tr><td>reminders + merge of loans</td><td>Interest-day and repay-by reminders fire once, not before 09:00, not for settled loans or when the page is off; people/loans merge with remapping.</td></tr>
+    <tr><td>groupState</td><td>Splits always sum to the total (also for 7 people, odd cents); balances sum to 0; settle-up ≤ n−1 transfers and clears everyone (80 random expenses); last-write-wins, idempotent replay, deletes, validation rejects bad input without mutating, limits, group-link parsing.</td></tr>
+  </tbody>
+</table>
+
+<h2>14.2 Layer 2 — end-to-end tests (Playwright + mocked Google)</h2>
+<p>A headless Chrome/Edge runs the production build. Network calls to Google are intercepted with <code>page.route</code>, and a small in-memory <b>fake Drive</b> implements exactly the rules the app depends on
+(owner's token for edits, public read only with a key and only when shared, app-data per user, delete). The Google script is replaced by a stub that counts <code>requestAccessToken()</code> calls.</p>
+<table>
+  <thead><tr><th style="width:28%">Scenario</th><th>Checks</th></tr></thead>
+  <tbody>
+    <tr><td>Core money flows</td><td>Optional pages hidden by default, enable in Profile, EMI add/pay/undo with linked expense, category detail, app dialogs, no native browser dialogs ever fired.</td></tr>
+    <tr><td>Notifications</td><td>Background reminder produces a real system notification (silent/vibrate options); foreground uses a toast; install banner flow.</td></tr>
+    <tr><td>Local mode</td><td>Reload persistence in IndexedDB, lite navigation, PIN → recovery code → forgot-PIN, encrypted backup + restore, connect to Google (empty Drive and merge), disconnect, erase.</td></tr>
+    <tr><td>Loans</td><td>Create, interest figures match the engine to the paisa, payments split, recorded-in-account with undo, statement share text, settled tab, persistence.</td></tr>
+    <tr><td>Groups (Drive-hosted)</td><td>Admin permission request (<code>drive.file</code> only for groups), file private until Invite, public read-only page with no sign-in, no add/edit controls for viewers, PDF download, second admin device, offline outbox, delete, bad links, sharing off without a key.</td></tr>
+    <tr><td>Two-device sync</td><td>Two contexts, one account, one fake Drive: a stale device no longer overwrites the other's change.</td></tr>
+    <tr><td>Token cache</td><td>Sign-in windows: first launch 1, reloads 0, expired 1, background triggers 0, user edit 1.</td></tr>
+  </tbody>
+</table>
+
+<h2>14.3 What the tests caught (examples)</h2>
+<ul>
+  <li><b>Data loss on refresh</b> — reproduced with two devices (7.4) before fixing.</li>
+  <li><b>A logout button without confirmation</b> — an un-awaited dialog promise.</li>
+  <li><b>A form opening behind another modal</b> — DOM-order stacking.</li>
+  <li><b>A sync pill stretching to full height</b> — a CSS class name (<code>.auth</code>) reused for two unrelated things.</li>
+  <li><b>New device can't open a group</b> — the "Allow" prompt was drawn on a screen that only appears once the group has loaded.</li>
+</ul>
+
+<h2>14.4 Recommended next step</h2>
+<div class="tip">Move these into the repository: add <b>Vitest</b> for the pure modules (<code>src/lib/*.js</code>) and <b>@playwright/test</b> for the flows, with the fake-Drive helper as a shared fixture, and run both in CI before deploy.
+The logic modules are already structured for this: no changes to production code are needed.</div>

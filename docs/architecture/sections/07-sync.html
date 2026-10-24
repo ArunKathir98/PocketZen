@@ -1,0 +1,92 @@
+<h1>7 · Persistence and Drive sync</h1>
+
+<h2>7.1 On-device storage: <code>idb.js</code></h2>
+<p>A 60-line wrapper turns IndexedDB into three promise functions: <code>idbGet(key)</code>, <code>idbSet(key, value)</code>, <code>idbDel(key)</code>. One database
+(<code>pocketzen</code>), one object store (<code>kv</code>). If IndexedDB is unavailable (some private modes) it silently falls back to <code>localStorage</code>
+under <code>pz:kv:&lt;key&gt;</code>.</p>
+<table>
+  <thead><tr><th style="width:26%">IndexedDB key</th><th>Content</th></tr></thead>
+  <tbody>
+    <tr><td><code>data:&lt;sub&gt;</code></td><td>The user's document (<code>sub = 'local'</code> for no-account users).</td></tr>
+    <tr><td><code>group:&lt;fileId&gt;</code></td><td>Last known state of a shared group (works offline).</td></tr>
+    <tr><td><code>outbox:&lt;fileId&gt;</code></td><td>The admin's group edits not yet saved to Drive.</td></tr>
+  </tbody>
+</table>
+<div class="why"><b>Why IndexedDB and not localStorage?</b> localStorage is synchronous, limited to roughly 5 MB, and stores only strings. IndexedDB is asynchronous, has a far larger quota
+and is the better target for the browser's "persistent storage" request. Small flags still live in localStorage because they must be readable synchronously
+at startup (session, theme, token).</div>
+<div class="note"><b>Migration.</b> Early versions kept the document in <code>localStorage['pz:data:&lt;sub&gt;']</code>. <code>loadData()</code> in <code>store.jsx</code> moves it into IndexedDB the first
+time it finds one, then deletes the old copy.</div>
+
+<h2>7.2 Cloud storage: the Drive app-data file</h2>
+<p>For Google users the same document is stored as <code>pocketzen-data.json</code> in the <b>app-data folder</b> of their Drive. That folder is hidden,
+private to this OAuth client and invisible in the normal Drive UI (<code>drive.appdata</code> scope). <code>google.js</code> exposes two calls:</p>
+<ul>
+  <li><code>driveLoad(sub, hint)</code> — find the file (id cached in <code>pz:fileId:&lt;sub&gt;</code>), download JSON; <code>null</code> if none exists.</li>
+  <li><code>driveSave(sub, data, hint)</code> — update the file with <code>PATCH …?uploadType=media</code>, or create it with a <code>multipart</code> upload the first time.</li>
+</ul>
+
+<h2>7.3 Dirty and synced markers</h2>
+<table>
+  <thead><tr><th style="width:26%">Key (localStorage)</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>pz:dirty:&lt;sub&gt;</code></td><td>Set on every commit; cleared after a successful push if nothing changed in the meantime. "This device has changes Drive hasn't seen."</td></tr>
+    <tr><td><code>pz:synced:&lt;sub&gt;</code></td><td>The Drive file's <code>updatedAt</code> that this device last saw or wrote. Used to detect that <i>someone else</i> wrote to Drive since.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.4 The two halves of sync</h2>
+<h3><code>pull()</code> — run at launch and when the app returns to the foreground</h3>
+<ol>
+  <li>Load the Drive document (<code>remote</code>).</li>
+  <li>If <code>remote.updatedAt &gt; local.updatedAt</code> and this device is <b>not dirty</b> → adopt the remote document (persist to IndexedDB, set <code>synced</code>).</li>
+  <li>Else if there is no remote, or the device is dirty, or local is newer → call <code>push()</code>.</li>
+  <li>Else they are identical → just record <code>synced</code>.</li>
+</ol>
+<h3><code>push()</code> — runs after edits (debounced)</h3>
+<ol>
+  <li>Re-read the Drive file. If its <code>updatedAt</code> is newer than <code>pz:synced</code>, <b>another device wrote since we last synced</b>: compute
+      <code>merged = mergeData(remote, local)</code> (settings and PIN preferring local), replace local state with it.</li>
+  <li><code>driveSave</code> the (possibly merged) document and record <code>synced = its updatedAt</code>.</li>
+  <li>If the user edited again while the upload ran, keep <code>dirty</code> and schedule another push; otherwise clear it.</li>
+</ol>
+<!--diagram:write-->
+<div class="why"><b>The bug this design fixes.</b> The first version simply uploaded the local document. With two devices open, the one holding an <i>older</i> copy overwrote the
+other's newer changes (a record added on the phone vanished when the laptop saved). It surfaced to the user as "data deleted on refresh". The reproducing test used a
+fake Drive shared by two browser contexts. The fix is the read-merge-write in step 1 above.</div>
+
+<h2>7.5 <code>mergeData(base, inc)</code> — combine without duplicates</h2>
+<p>The same function is used by the push merge, by "Connect Google Drive" when Drive already has data, and by importing a backup in "Merge" mode.</p>
+<table>
+  <thead><tr><th style="width:24%">Collection</th><th>Rule</th></tr></thead>
+  <tbody>
+    <tr><td>accounts</td><td>Matched by id <i>or</i> case-insensitive name; the incoming duplicate is dropped and its id remapped.</td></tr>
+    <tr><td>categories</td><td>Matched by id or (type + name). So two "Salary" income categories from two fresh installs become one.</td></tr>
+    <tr><td>transactions</td><td>Dedupe by id; <code>accountId / toAccountId / categoryId</code> remapped to the kept ids.</td></tr>
+    <tr><td>budgets</td><td>One per category.</td></tr>
+    <tr><td>emis, reminders</td><td>Union by id (EMIs' account remapped).</td></tr>
+    <tr><td>people, loans</td><td>People matched by name; loans union by id with <code>personId</code> and event <code>accountId</code> remapped.</td></tr>
+    <tr><td>groups</td><td>Union by id.</td></tr>
+    <tr><td>settings, pin</td><td>Base settings; optional-page flags OR-ed; PIN from whichever side has one.</td></tr>
+  </tbody>
+</table>
+<div class="warn"><b>Deliberate trade-off:</b> a merge is a <i>union</i>, so it never loses data but cannot know about deletions. If device A deletes a record and device B (stale) edits something, the record
+can come back. We chose "never silently lose money records" over "never resurrect a deleted one". Real per-record tombstones would fix it at the cost of more code; the group
+engine (chapter 10) does use per-entity timestamps because its data is smaller and more structured.</div>
+
+<h2>7.6 Offline behaviour</h2>
+<ul>
+  <li>Reads and writes always hit IndexedDB, so the app is fully usable offline.</li>
+  <li>While offline, <code>push()</code> fails; the status becomes <code>offline</code>, <code>dirty</code> stays set.</li>
+  <li>When the device is back online (and a token is valid) or the user taps Reconnect, the next push merges and uploads.</li>
+  <li>The service worker precaches the app shell, so the page itself loads without a network.</li>
+</ul>
+
+<h2>7.7 Switching between local and Google (<code>CloudCard.jsx</code>)</h2>
+<ol>
+  <li>Offer a backup file first (optional).</li>
+  <li>Sign in, then <code>driveLoad</code>.</li>
+  <li>If Drive has user data, ask: <b>Merge both</b> (default, <code>mergeData(remote, local)</code>) · <b>Keep Drive data only</b> · <b>Replace Drive with this device</b> · Cancel.</li>
+  <li><code>switchToGoogle(profile, next)</code> writes <code>next</code> under the Google <code>sub</code>, marks it dirty and removes the local copy. The normal push then uploads it.</li>
+</ol>
+<p>The reverse, <code>disconnectGoogle()</code>, keeps a complete copy on the device and never touches the Drive file.</p>

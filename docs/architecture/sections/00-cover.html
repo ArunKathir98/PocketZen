@@ -1,0 +1,61 @@
+<div class="cover">
+  <div class="band">
+    <img src="{{LOGO}}" alt="PocketZen logo" />
+    <div><h1>PocketZen</h1><p>Your Money. Your Control.</p></div>
+  </div>
+  <h2>Architecture &amp; Implementation Guide</h2>
+  <p class="meta">Version 1.0 · React 19 + Vite 8 progressive web app · No backend, no database</p>
+  <div class="for">
+    <b>Who this is for.</b> A React developer who has never seen this codebase. After reading you should be able to
+    explain how the app starts, where data lives, how sign-in and sync work, how every feature is built, why each
+    choice was made, and how to rebuild it step by step.
+  </div>
+  <p class="small" style="margin-top:10mm">Repository: github.com/ArunKathir98/PocketZen · Live app: pocketzen.arunkumar98kak.workers.dev</p>
+</div>
+
+<h1>How to read this guide</h1>
+<p>The guide goes from the big picture to the details, then finishes with a step-by-step build log and a maintenance
+playbook. If you are short on time, read <b>chapters 1, 3, 5 and 17</b>; they give you the mental model.</p>
+
+<div class="toc">
+  <div><b>1</b> The product and its constraints</div>
+  <div><b>2</b> Tech stack and packages</div>
+  <div><b>3</b> Architecture at a glance</div>
+  <div><b>4</b> Project map (every file)</div>
+  <div><b>5</b> Startup and routing flow</div>
+  <div><b>6</b> State management and handlers</div>
+  <div><b>7</b> Persistence and Drive sync</div>
+  <div><b>8</b> Authentication and security</div>
+  <div><b>9</b> Feature modules</div>
+  <div><b>10</b> Shared groups</div>
+  <div><b>11</b> The UI layer</div>
+  <div><b>12</b> PWA, offline and notifications</div>
+  <div><b>13</b> Build, configuration, deployment</div>
+  <div><b>14</b> Testing approach</div>
+  <div><b>15</b> Step-by-step implementation</div>
+  <div><b>16</b> Decisions, advantages, trade-offs</div>
+  <div><b>17</b> Maintenance playbook</div>
+  <div><b>A</b> Storage keys · Google calls · handlers · glossary</div>
+</div>
+
+<h2>Conventions used in this document</h2>
+<div class="note">Blue boxes add context you might otherwise miss.</div>
+<div class="why">Purple boxes explain <b>why</b> a design choice was made, including the alternatives that were rejected.</div>
+<div class="adv">Green boxes call out the concrete advantage you get from a choice.</div>
+<div class="warn">Amber boxes mark traps, limits and things that surprised us while building.</div>
+<p>File paths are relative to the repository root. <code>sub</code> means a Google account's unique id (or the literal
+<code>"local"</code> for the no-account mode). Money amounts are plain numbers in the user's currency, except inside shared
+groups, where they are converted to whole minor units (cents) for exact arithmetic.</p>
+
+<h2>The five-minute summary</h2>
+<ol>
+  <li>PocketZen is a <b>static single-page app</b>. There is no PocketZen server. Cloudflare only serves the built files.</li>
+  <li>All user data lives in one JSON document. It is kept in <b>IndexedDB</b> on the device and, for Google users, mirrored to a
+      hidden file in the user's own <b>Google Drive</b> (<code>drive.appdata</code>).</li>
+  <li>React state is a single <b>Context</b> (<code>store.jsx</code>). Every change goes through one function, <code>commit()</code>,
+      which updates the UI, saves locally and schedules a Drive sync.</li>
+  <li>Sign-in uses <b>Google Identity Services (token model)</b>: the browser gets a one-hour access token and calls the Drive REST API directly.</li>
+  <li>People without a Google account use a <b>lite mode</b> (Records, Categories, Accounts) that never leaves the device.</li>
+  <li>Calculation-heavy features (loan interest, group settle-up, balances) are <b>pure functions</b> with no React inside, so they are easy to test.</li>
+  <li>Shared groups are <b>files in the admin's Drive</b> that anyone with a link can view. Only the admin edits.</li>
+</ol>

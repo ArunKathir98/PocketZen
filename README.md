@@ -97,10 +97,16 @@ client's origins and the API key's referrers. Every push to `main` redeploys.
 `wrangler.jsonc` serves `dist/` as static assets. It also carries a migration that retires `GroupDO`, a Durable Object
 from an earlier server-based groups prototype; keep it.
 
+## Documentation
+
+- **[docs/PocketZen-Architecture.pdf](docs/PocketZen-Architecture.pdf)** — the full architecture and implementation guide (57 pages): stack and packages, startup flow, state and handlers, sync, authentication, every feature, shared groups, PWA, deployment, testing, a step-by-step build log and a maintenance playbook. Written for a React developer new to the codebase.
+- Sources live in `docs/architecture/` (HTML sections + CSS); rebuild the PDF with `npm run docs`.
+
 ## Tools
 
 ```bash
 npm run icons      # regenerate PWA icons from src/assets/logo-source.jpg
+npm run docs       # rebuild docs/PocketZen-Architecture.pdf from docs/architecture
 npm run poster -- https://your-app-url --form https://forms.gle/xxxx   # shareable poster + QR (needs a build first)
 ```
 
@@ -114,7 +120,8 @@ src/pages        Records, Categories, Accounts, Budget, Emi, Loans, Groups (+ Gr
 src/components   dialogs, modals, banners, backup / recovery / notification / share cards
 src/lib          store (data + sync), google (Drive), idb, backup, merge, loans, emi, groupState, groupPdf, useGroup, reminders, notify
 public           icons, service-worker helper, home.html, privacy.html
-scripts          icon generator, poster generator
+docs             architecture guide: PDF + its HTML/CSS sources
+scripts          icon generator, poster generator, docs (PDF) generator
 ```
 
 ## Notes & limits

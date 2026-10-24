@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "icons": "node scripts/make-icons.mjs",
-    "poster": "node scripts/poster/make.mjs"
+    "poster": "node scripts/poster/make.mjs",
+    "docs": "node scripts/docs/make-pdf.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.61.0",

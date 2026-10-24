@@ -1,0 +1,87 @@
+<h1>10 · Shared groups (split expenses)</h1>
+
+<h2>10.1 The requirement and the design journey</h2>
+<p>Requirement: a group (trip, flat, event) with people, expenses and payments; suggested payments to settle up; a PDF summary; and a way to invite friends.</p>
+<table>
+  <thead><tr><th style="width:26%">Attempt</th><th>Idea</th><th>Outcome</th></tr></thead>
+  <tbody>
+    <tr><td>v1 — server</td><td>A Cloudflare Worker with one <b>Durable Object</b> per group, anyone with an id could join and edit.</td><td>Worked and was tested (25 concurrent edits, no lost update) — but it introduced a backend, which contradicted "no server" and brought hosting/privacy questions.</td></tr>
+    <tr><td>v2 — Drive-hosted (current)</td><td>The group is a <b>file in the admin's own Google Drive</b>. The admin edits. Everyone else gets a view-only link.</td><td>No server, no database. Matches the privacy promise. Trade-off: only the admin can change things.</td></tr>
+  </tbody>
+</table>
+<div class="why">The product owner chose simplicity: "no backend, joined users just view, admin has all the rights". That removed the hard part of collaboration (concurrent writers) and let us reuse Drive as storage.
+<code>wrangler.jsonc</code> still carries a migration that retires the old <code>GroupDO</code> class so the Cloudflare deploy stays clean.</div>
+
+<h2>10.2 Roles</h2>
+<table>
+  <thead><tr><th style="width:20%">Role</th><th>Who</th><th>Can</th><th>Stored as</th></tr></thead>
+  <tbody>
+    <tr><td>admin</td><td>The Google user who created the group</td><td>Everything: add/edit/delete expenses, payments, people, events; rename; tick settle-up payments; invite; delete group</td><td><code>data.groups[i].role = 'admin'</code></td></tr>
+    <tr><td>viewer</td><td>Anyone with the link (no sign-in needed)</td><td>View, refresh, see who-pays-whom, download/share the PDF</td><td>Optional <code>role:'viewer'</code> entry if they save it (needs Google)</td></tr>
+  </tbody>
+</table>
+
+<h2>10.3 The group document (<code>groupState.js</code>)</h2>
+<pre><code>{ id, name, currency, createdAt, updatedAt, version,
+  members:  { [id]: { id, name, email, deleted, u } },
+  events:   { [id]: { id, name, deleted, u } },
+  expenses: { [id]: { id, title, amount, paidBy, split:[memberId], eventId, date, note, deleted, u } },
+  payments: { [id]: { id, from, to, amount, date, note, settle, deleted, u } } }</code></pre>
+<p>Every entity has <code>u</code> (last-updated ms). Deleting sets <code>deleted:true</code> (a tombstone), so a deletion also wins over an older edit.</p>
+
+<h3>Operations and last-write-wins</h3>
+<p>Changes are small idempotent operations: <code>{ t:'set', c:'expenses', id, v:{…} }</code> or <code>{ t:'meta', v:{ name } }</code>.
+<code>applyOps(state, ops, now)</code> validates each one (<code>cleanEntity</code>: allowed fields only, id format, amount 0–1e9, date format, ≤ 2000 bytes, timestamps clamped to now + 60 s),
+ignores an op if the stored entity is newer, increments <code>version</code> when something changed, and enforces limits (60 members, 50 events, 3000 expenses, 3000 payments, 1 MB total).
+It never mutates its input. The same function is used when the admin saves and when the UI overlays unsaved edits on top of the last known state.</p>
+
+<h2>10.4 Money maths</h2>
+<ul>
+  <li><b>Minor units.</b> <code>toMinor(x) = round(x × 100)</code>; all group arithmetic is on integers, so no floating-point drift.</li>
+  <li><b><code>splitEqual(total, ids)</code></b>: <code>base = ⌊total/n⌋</code>; the first <code>total − base×n</code> people get one extra cent, so the parts always sum to the total.</li>
+  <li><b><code>computeBalances</code></b>: per person <code>paid</code>, <code>share</code>, <code>sent</code>, <code>received</code>; <code>net = paid − share + sent − received</code> (positive = the group owes them). Net always sums to 0.</li>
+  <li><b><code>suggestSettlements</code></b>: repeatedly match the largest debtor with the largest creditor and transfer <code>min(debt, credit)</code> until all are zero. At most <i>n − 1</i> payments, deterministic ordering.</li>
+  <li><b>Settle-up checkboxes:</b> ticking a suggestion creates a <code>payment</code> (<code>settle:true</code>); balances shrink and the suggestion disappears; unticking deletes that payment. The checkbox is the UI for a real payment record.</li>
+</ul>
+
+<h2>10.5 Lifecycle: create → share → view</h2>
+<!--diagram:groups-->
+<p class="caption">Figure 10.1 — Admin, Drive and viewer. Nothing in this picture is a PocketZen server.</p>
+<div class="step"><div class="n">1</div><div><h3>Create</h3><p><code>enableGroupScope()</code> (first group only) → build a draft with the admin as the first member →
+<code>createGroupFile()</code> (multipart upload, <b>private</b>) → <code>writeGroupFile()</code> again so the real file id is stored inside → cache in IndexedDB →
+<code>add('groups', { id, name, role:'admin', me })</code>.</p></div></div>
+<div class="step"><div class="n">2</div><div><h3>Edit (admin)</h3><p>Forms call <code>dispatch(ops)</code> from <code>useGroup</code>. Ops go into an <b>outbox</b> (IndexedDB) and are applied optimistically on screen. The sync step re-reads the file, applies the outbox on top of
+what is in Drive (the admin may use several devices), and writes it back. Offline edits wait in the outbox.</p></div></div>
+<div class="step"><div class="n">3</div><div><h3>Invite</h3><p>Tapping <b>Invite</b> calls <code>shareGroupFile()</code> (<code>permissions.create</code> role reader, type anyone, <code>allowFileDiscovery:false</code>) and shows the link
+<code>…/?view=&lt;fileId&gt;</code>. Until then the file is private.</p></div></div>
+<div class="step"><div class="n">4</div><div><h3>View</h3><p>Opening the link: <code>capturePendingJoin()</code> stores the id; <code>App.jsx</code> shows <code>PublicGroup</code> (no session) which renders <code>GroupView</code> with a viewer entry.
+<code>readPublicGroupFile(id)</code> fetches <code>files/&lt;id&gt;?alt=media&amp;key=API_KEY</code> — no token. Polls every 30 s; keeps a cached copy for offline.</p></div></div>
+<div class="step"><div class="n">5</div><div><h3>Save to my list (viewer with Google)</h3><p>Groups → Join accepts a link or id, reads the file, optionally lets the person pick "which one are you?" (to show their own balance) and stores a <code>viewer</code> entry.</p></div></div>
+<div class="step"><div class="n">6</div><div><h3>Delete</h3><p><code>deleteGroupFile()</code> removes the file; viewers see "This group isn't available".</p></div></div>
+
+<h2>10.6 <code>useGroup(id, role, hint)</code></h2>
+<table>
+  <thead><tr><th style="width:24%">Part</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr><td>Cache</td><td>Loads <code>group:&lt;id&gt;</code> first, so the screen appears instantly and works offline.</td></tr>
+    <tr><td>Polling</td><td>Admin every 20 s, viewer every 30 s, plus on tab visibility and <code>online</code>. Admin polling needs a valid token; viewer polling needs none.</td></tr>
+    <tr><td>Outbox</td><td>Admin only. Unsent ops persist in <code>outbox:&lt;id&gt;</code> and survive reloads.</td></tr>
+    <tr><td>Shown state</td><td><code>applyOps(lastServerState, outbox)</code> — what the admin typed appears immediately.</td></tr>
+    <tr><td>Status</td><td><code>loading | live | offline | auth | scope | missing | nokey | badkey</code>. <code>scope</code>: this device has not been granted <code>drive.file</code> yet (shows an "Allow" button). <code>missing</code>: file deleted or no longer shared.</td></tr>
+  </tbody>
+</table>
+
+<h2>10.7 The sharing switch and the API key</h2>
+<p>Viewing by link needs a Google <b>API key</b> compiled into the app (<code>VITE_GOOGLE_API_KEY</code>). <code>groupSharingEnabled() = GROUP_SHARING &amp;&amp; hasApiKey()</code>. When it is false:
+the Join and Invite buttons disappear, group links are ignored and groups remain a private, admin-only tool. Setting the key at build time turns sharing on with no code change; a constant in <code>src/config.js</code>
+can force it off. Error messages distinguish <i>no key</i>, <i>key rejected by Google</i> (wrong referrer restriction, Drive API not enabled) and <i>group not found</i>.</p>
+
+<h2>10.8 The PDF summary (<code>groupPdf.js</code>)</h2>
+<ol>
+  <li>A <code>Doc</code> class draws A4 pages (794×1123 CSS px, rendered at 2×) on <code>&lt;canvas&gt;</code>: gradient header with logo, stat tiles, then tables (balances, suggested payments, payments recorded, every expense) with wrapping text, zebra rows, repeated table headers on a new page and "Page n of N" footers.</li>
+  <li>Each canvas becomes a JPEG (<code>canvas.toBlob</code>, quality 0.92).</li>
+  <li><code>pdfFromJpegs()</code> writes a minimal PDF 1.4: catalog, pages, and per page a page object, an image XObject (<code>/DCTDecode</code>) and a content stream drawing it full-page; then the xref table and trailer.</li>
+  <li><code>shareOrDownloadPdf()</code> uses the share sheet when it accepts files, else downloads.</li>
+</ol>
+<div class="why"><b>Why canvas and not a PDF library?</b> Standard PDF fonts cannot show "₹" or Tamil/Hindi/Chinese names. The browser can, so we let it render the text and embed the picture.
+Trade-off: the text in the PDF is not selectable. Tested with 90 expenses → 4 valid pages with mixed scripts.</div>

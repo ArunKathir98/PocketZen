@@ -1,0 +1,60 @@
+<h1>17 · Maintenance playbook</h1>
+<p>The project is in bug-fix mode: no major features are planned. This chapter is the "where do I look?" guide.</p>
+
+<h2>17.1 Symptom → where to look</h2>
+<table>
+  <thead><tr><th style="width:34%">Symptom</th><th style="width:30%">First suspects</th><th>How to check</th></tr></thead>
+  <tbody>
+    <tr><td>Data missing after refresh / on another device</td><td><code>store.jsx</code> <code>push/pull</code>, <code>merge.js</code></td><td>DevTools → Application → IndexedDB <code>pocketzen/kv</code> → <code>data:&lt;sub&gt;</code>; localStorage <code>pz:dirty:*</code>, <code>pz:synced:*</code>; Network: calls to <code>googleapis.com</code>.</td></tr>
+    <tr><td>Google window keeps appearing</td><td><code>google.js</code> (token cache, <code>hasLiveToken</code> guards)</td><td><code>localStorage['pz:tok']</code> present with a future <code>exp</code>? Remove it to simulate expiry.</td></tr>
+    <tr><td>"Reconnect" banner</td><td>Expired token + blocked popup</td><td>Tap Reconnect (a user gesture lets the popup open). Check the OAuth origin list.</td></tr>
+    <tr><td>Sign-in error <code>origin_mismatch</code></td><td>Google Cloud OAuth client</td><td>The browser URL must exactly match an Authorised JavaScript origin (scheme, host, port, no trailing slash).</td></tr>
+    <tr><td>"Access blocked" for other people</td><td>OAuth consent still in Testing</td><td>Add them as test users or publish the app.</td></tr>
+    <tr><td>Group says it needs an API key</td><td>Build variable missing</td><td>Set <code>VITE_GOOGLE_API_KEY</code> as a <b>build</b> variable, redeploy. Join/Invite stay hidden without it.</td></tr>
+    <tr><td>Group says Google rejected the key</td><td>Key restrictions / Drive API</td><td>Add the site to the key's website referrers; enable the Drive API.</td></tr>
+    <tr><td>New device can't open its own group</td><td>Missing <code>drive.file</code> grant on that device</td><td>Use the "Allow" banner (<code>enableGroupScope</code>).</td></tr>
+    <tr><td>Balance / settle-up looks wrong</td><td><code>groupState.js</code> (<code>computeBalances</code>), <code>calc.js</code></td><td>Reproduce with the numbers in a tiny Node script; the functions are pure.</td></tr>
+    <tr><td>Loan interest differs from a lender's figure</td><td><code>loans.js</code> (day/30, compounding model)</td><td>Check start date, rate period, events order; compare per segment.</td></tr>
+    <tr><td>No notification</td><td><code>notify.js</code>, permission, SW</td><td>Notification permission granted? App hidden (foreground uses a toast)? Service worker active? OS focus mode?</td></tr>
+    <tr><td>No install button</td><td>HTTPS/manifest/dismissal</td><td>Lighthouse PWA checks; <code>pz:installDismissed</code> (7-day snooze).</td></tr>
+    <tr><td>A fix "doesn't show" after deploy</td><td>Precached service worker</td><td>Reload twice, or Application → Service Workers → Unregister.</td></tr>
+    <tr><td>Layout glitch on a phone</td><td><code>styles.css</code> breakpoints (820 / 1280 px), safe-area insets</td><td>DevTools device toolbar at 390×844; check <code>.bottom-nav</code>, <code>.page</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>17.2 Conventions to keep</h2>
+<ul>
+  <li><b>All writes go through <code>commit()</code></b> (via <code>add/update/remove/setSettings</code>). Never mutate <code>data</code> directly.</li>
+  <li><b>New collection checklist:</b> <code>emptyData()</code> → <code>normalize()</code> → <code>mergeData()</code> → <code>hasUserData()</code> if relevant → page → tab.</li>
+  <li><b>Dates</b> are <code>'YYYY-MM-DD'</code> strings; times <code>'HH:mm'</code>; timestamps are ms numbers (<code>updatedAt</code>, <code>u</code>).</li>
+  <li><b>Money</b> is a plain number in personal data and integer minor units inside group maths.</li>
+  <li><b>Always <code>await</code> dialog helpers</b> (<code>confirm</code>, <code>alert</code>, <code>choose</code>).</li>
+  <li><b>Effects that start something must clean up</b> (StrictMode runs them twice in development).</li>
+  <li><b>Modals opened from inside a modal</b> must be rendered after it (DOM order = stacking order).</li>
+  <li><b>Keep <code>lib/*</code> logic files free of React and DOM</b> so they stay testable.</li>
+  <li><b>Background code must not open Google windows</b>: check <code>google.hasLiveToken()</code> first.</li>
+  <li><b>Never add a secret</b> to the project; only public identifiers belong in <code>VITE_*</code>.</li>
+</ul>
+
+<h2>17.3 Debug cheat-sheet</h2>
+<pre><code><span class="c">// DevTools console</span>
+Object.keys(localStorage).filter(k =&gt; k.startsWith(<span class="s">'pz:'</span>))      <span class="c">// every flag the app uses</span>
+JSON.parse(localStorage.getItem(<span class="s">'pz:session'</span>))                 <span class="c">// who is signed in, which mode</span>
+localStorage.removeItem(<span class="s">'pz:tok'</span>)                              <span class="c">// pretend the Google token expired</span>
+localStorage.removeItem(<span class="s">'pz:dirty:'</span> + sub)                     <span class="c">// pretend nothing is waiting to upload</span>
+indexedDB.databases()                                           <span class="c">// is the 'pocketzen' database there?</span></code></pre>
+
+<h2>17.4 Running a local copy end to end</h2>
+<ol>
+  <li><code>cp .env.example .env</code>, fill the client id (and API key if you want group links).</li>
+  <li>Add <code>http://localhost:5173</code> to the OAuth client's origins (and the API key's referrers).</li>
+  <li><code>npm install &amp;&amp; npm run dev</code>.</li>
+  <li>Restart <code>npm run dev</code> after editing <code>.env</code>; Vite reads it only at start.</li>
+</ol>
+
+<h2>17.5 What to do next (if anything)</h2>
+<ul>
+  <li>Move the tests into the repo (Vitest + Playwright) and run them in CI.</li>
+  <li>Buy a domain, finish Google brand verification, and show "Sign in to PocketZen" on the consent screen.</li>
+  <li>If real-time reminders on closed phones become important, add a push backend; <code>sw-notify.js</code> already handles <code>push</code>.</li>
+</ul>

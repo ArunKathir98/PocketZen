@@ -1,0 +1,110 @@
+<h1>6 · State management and handlers</h1>
+
+<h2>6.1 The data document</h2>
+<p><code>emptyData()</code> in <code>lib/defaults.js</code> defines the whole document. It is the only thing that is saved, synced, exported and merged.</p>
+<pre><code>{
+  version: 1,
+  updatedAt: 0,                  <span class="c">// ms timestamp of the last change — drives sync decisions</span>
+  accounts:     [],              <span class="c">// { id, name, type, balance (opening), color, note }</span>
+  categories:   [],              <span class="c">// { id, type:'income'|'expense', name, icon, color }</span>
+  transactions: [],              <span class="c">// { id, type:'income'|'expense'|'transfer', amount, accountId, toAccountId,</span>
+                                 <span class="c">//   categoryId, note, date:'YYYY-MM-DD', time:'HH:mm' }</span>
+  budgets:      [],              <span class="c">// { id, categoryId, amount, period:'monthly' }</span>
+  reminders:    [],              <span class="c">// { id, title, amount, dueAt, repeat, until, doneCount }</span>
+  emis:         [],              <span class="c">// { id, name, lender, totalAmount, totalMonths, emiAmount, startDate, paidBefore, payments[], accountId }</span>
+  people:       [],              <span class="c">// { id, name, note }</span>
+  loans:        [],              <span class="c">// { id, personId, direction:'lent'|'borrowed', title, startDate, interest{…}, dueDate, remind, note, events[] }</span>
+  groups:       [],              <span class="c">// groups I belong to: { id (Drive file id), name, role:'admin'|'viewer', me, joinedAt }</span>
+  settings: { currency, dailyReminder, dailyReminderTime, showEmi, showReminders,
+              showLoans, showGroups, notifySound, lastBackupAt },
+  pin: null                      <span class="c">// { salt, hash, recovery? } — never exported</span>
+}</code></pre>
+<div class="note"><b>Account balances are not stored.</b> They are computed on demand (<code>calc.accountBalance</code> = opening balance + income − expense ± transfers).
+Storing derived values would let them drift from the records; computing them cannot.</div>
+<div class="why"><b>One document, not many tables.</b> A personal finance dataset is small (a few thousand records). One JSON object is trivial to persist,
+export, import, merge and sync as a single Drive file. A normalised database would add complexity with no benefit at this size.</div>
+<p>Every record has an <code>id</code> created by <code>uid()</code> (<code>crypto.randomUUID()</code>). Ids are what make merging two documents safe (chapter 7).</p>
+
+<h2>6.2 <code>store.jsx</code> — the provider</h2>
+<p><code>AppProvider</code> owns this React state:</p>
+<table>
+  <thead><tr><th style="width:20%">State</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>session</code></td><td>Who is signed in (<code>pz:session</code>), or <code>null</code>. Mode is <code>'google'</code> or <code>'local'</code>.</td></tr>
+    <tr><td><code>data</code></td><td>The live document.</td></tr>
+    <tr><td><code>ready</code></td><td>False until the document has loaded from IndexedDB.</td></tr>
+    <tr><td><code>locked</code></td><td>True while the PIN screen must be shown.</td></tr>
+    <tr><td><code>sync</code></td><td><code>idle | local | syncing | synced | offline | auth | error</code> — drives the status pill and the "Reconnect" banner.</td></tr>
+    <tr><td><code>loggingIn</code>, <code>error</code></td><td>Login button state and message.</td></tr>
+  </tbody>
+</table>
+<p>and these refs: <code>dataRef</code> and <code>sessionRef</code> (always the latest value, safe to read inside async callbacks), <code>pushTimer</code>, <code>pushing</code>.</p>
+<div class="why"><b>Why refs next to state?</b> Async code (a push that awaits Drive) would otherwise read a stale <code>data</code> captured by its closure.
+<code>dataRef.current</code> is updated synchronously inside <code>commit</code>, so a sync that finishes seconds later still sees the user's newest edit.</div>
+
+<h2>6.3 The one write path: <code>commit()</code></h2>
+<pre><code><span class="k">const</span> commit = useCallback((fn) =&gt; {
+  <span class="k">const</span> s = sessionRef.current
+  <span class="k">const</span> next = { ...fn(dataRef.current), updatedAt: Date.now() }
+  dataRef.current = next            <span class="c">// 1. latest value for async code</span>
+  setData(next)                     <span class="c">// 2. re-render now</span>
+  <span class="k">if</span> (s) {
+    persistLocal(s.sub, next)       <span class="c">// 3. IndexedDB  data:&lt;sub&gt;</span>
+    <span class="k">if</span> (s.mode !== <span class="s">'local'</span>) {
+      localStorage.setItem(dirtyKey(s.sub), <span class="s">'1'</span>)   <span class="c">// 4. "Drive is behind"</span>
+      schedulePush()                <span class="c">// 5. debounce 1.5 s → push()</span>
+    }
+  }
+}, [...])</code></pre>
+<p>Everything the UI can change goes through it via the small API below, so there is exactly one place to look for "who changed the data".</p>
+
+<h2>6.4 The context API (<code>useApp()</code>)</h2>
+<table>
+  <thead><tr><th style="width:28%">Name</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>add(coll, item)</code></td><td>Appends <code>{ id: uid(), ...item }</code> to a collection; returns the new item (so callers can use its id immediately).</td></tr>
+    <tr><td><code>update(coll, id, patch)</code></td><td>Shallow-merges a patch into one item.</td></tr>
+    <tr><td><code>remove(coll, id)</code></td><td>Deletes one item.</td></tr>
+    <tr><td><code>setSettings(patch)</code></td><td>Merges into <code>settings</code>.</td></tr>
+    <tr><td><code>setPin(record)</code></td><td>Stores or clears the PIN record.</td></tr>
+    <tr><td><code>replaceAll(doc)</code> / <code>mergeIn(doc)</code></td><td>Import a backup: replace everything (keeping the current PIN and last-backup time) or merge with <code>mergeData</code>.</td></tr>
+    <tr><td><code>lock()</code> / <code>unlock()</code></td><td>Show or leave the PIN screen.</td></tr>
+    <tr><td><code>login()</code></td><td>Google sign-in flow (chapter 8).</td></tr>
+    <tr><td><code>loginLocal()</code></td><td>Start a no-account session (<code>sub = 'local'</code>) and ask the browser for persistent storage.</td></tr>
+    <tr><td><code>reconnect()</code></td><td>User-triggered token renewal (from the banner), then <code>pull()</code>.</td></tr>
+    <tr><td><code>syncNow()</code></td><td>Alias of <code>pull()</code> (the refresh button in Profile).</td></tr>
+    <tr><td><code>logout()</code></td><td>Flush pending edits to Drive, revoke the token, delete local data and the session. In local mode this means <b>erase everything</b>.</td></tr>
+    <tr><td><code>switchToGoogle(profile, next)</code></td><td>Local → Google: store <code>next</code> under the Google <code>sub</code>, mark dirty (so it uploads), remove the local copy.</td></tr>
+    <tr><td><code>disconnectGoogle()</code></td><td>Google → local: keep a full copy under <code>'local'</code>, leave the Drive file untouched.</td></tr>
+    <tr><td><code>session, isLocal, ready, data, locked, sync, loggingIn, error</code></td><td>Read-only values.</td></tr>
+  </tbody>
+</table>
+<p>Usage in a page is deliberately boring:</p>
+<pre><code><span class="k">const</span> { data, add, update, remove } = useApp()
+add(<span class="s">'transactions'</span>, { type: <span class="s">'expense'</span>, amount: 250, accountId, categoryId, date, time, note })
+update(<span class="s">'budgets'</span>, budget.id, { amount: 9000 })</code></pre>
+
+<h2>6.5 Handlers and effects inside the provider</h2>
+<table>
+  <thead><tr><th style="width:27%">Handler / effect</th><th style="width:25%">Trigger</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr><td>Startup load effect</td><td>mount</td><td><code>loadData(sub)</code> → set <code>data</code>, <code>locked</code>, <code>ready</code>; local mode also sets <code>sync='local'</code> and calls <code>navigator.storage.persist()</code>.</td></tr>
+    <tr><td>Keep-alive pull effect</td><td><code>session.sub</code> or <code>ready</code> changes</td><td>Google sessions: <code>pull()</code> once at launch (may renew the token).</td></tr>
+    <tr><td><code>onVis</code> (visibilitychange)</td><td>tab hidden / shown</td><td>Hidden ≥ 60 s with a PIN → <code>setLocked(true)</code>. Shown: <i>only if a valid token exists</i>, push if dirty, otherwise <code>pull()</code> (throttled to once per 15 s).</td></tr>
+    <tr><td><code>onOnline</code></td><td><code>online</code> event</td><td><code>pull()</code>, again only with a valid token.</td></tr>
+    <tr><td><code>schedulePush(ms=1500)</code></td><td>after every commit</td><td>Debounces pushes so a burst of edits becomes one Drive write.</td></tr>
+    <tr><td><code>push()</code> / <code>pull()</code></td><td>see chapter 7</td><td>The two halves of sync.</td></tr>
+    <tr><td><code>classify(error)</code></td><td>any sync failure</td><td>Maps an error to <code>offline</code> (no network / TypeError), <code>auth</code> (401/403 or popup/auth messages) or <code>error</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>6.6 Other contexts and hooks</h2>
+<ul>
+  <li><b><code>DialogProvider</code> / <code>useDialog()</code></b> (<code>components/dialog.jsx</code>): <code>await confirm({title, message, confirmText, danger})</code>,
+      <code>await alert({...})</code>, <code>await choose({ actions:[{label,value,variant}] })</code>. One dialog at a time, Escape cancels (resolves <code>null</code>).
+      These replace <code>window.confirm</code>, which looks out of place in an installed app and cannot offer three choices.</li>
+  <li><b><code>useInstall()</code></b> (<code>lib/install.js</code>): exposes <code>canPrompt</code>, <code>ios</code>, <code>installed</code> and <code>prompt()</code>.</li>
+  <li><b><code>useGroup(id, role, hint)</code></b> (<code>lib/useGroup.js</code>): see chapter 10.</li>
+</ul>
+<div class="warn"><b>A real bug we hit:</b> after introducing <code>useDialog</code>, one button still called <code>confirm('Log out?')</code> with a plain string. The function
+returns a Promise, which is always truthy, so the button logged the user out immediately without asking. Always <code>await</code> the dialog helpers.</div>

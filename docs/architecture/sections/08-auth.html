@@ -1,0 +1,103 @@
+<h1>8 · Authentication and security</h1>
+
+<h2>8.1 What "login" means here</h2>
+<p>PocketZen has <b>no user accounts of its own</b>. "Logging in" means getting permission from Google to read and write files in the user's Drive, using
+<b>Google Identity Services (GIS), token model</b>. The browser asks Google for an <i>access token</i>; the token is then sent as <code>Authorization: Bearer …</code>
+on Drive REST calls made directly from the browser.</p>
+<div class="why"><b>Why the token model and not "Sign in with Google" ID tokens or the code flow?</b> An ID token proves who you are but gives no Drive access.
+The authorization-code flow gives long-lived refresh tokens, but needs a server to keep a client secret, and we have no server. The token model needs no secret
+and no server. The price is that tokens last only about an hour and cannot be refreshed silently in the background without a window (see 8.4).</div>
+
+<h2>8.2 Scopes (permissions)</h2>
+<table>
+  <thead><tr><th style="width:34%">Scope</th><th style="width:30%">When requested</th><th>Gives access to</th></tr></thead>
+  <tbody>
+    <tr><td><code>openid email profile</code></td><td>Every sign-in</td><td>Name, email, picture — shown in Profile and attached to group membership.</td></tr>
+    <tr><td><code>…/auth/drive.appdata</code></td><td>Every sign-in</td><td>The hidden app-data folder: <code>pocketzen-data.json</code>.</td></tr>
+    <tr><td><code>…/auth/drive.file</code></td><td>Only when the user creates their first group (<code>enableGroupScope()</code>)</td><td>Only files this app created — the group files. Not the rest of Drive.</td></tr>
+  </tbody>
+</table>
+<p>All three are classed by Google as non-sensitive, so the OAuth app can be published without a security review. <code>drive.file</code> is requested
+<i>incrementally</i>: <code>enableGroupScope()</code> sets <code>pz:groupScope = '1'</code> and requests a token; from then on <code>scopes()</code> includes it. A second device
+shows an "Allow" banner the first time that admin opens a group there.</p>
+<div class="adv">Most users only ever see the basic permission. The extra Drive permission appears only for people who create a group, at the moment it makes sense.</div>
+
+<h2>8.3 The login flow</h2>
+<!--diagram:auth-->
+<p class="caption">Figure 8.1 — First Google sign-in and later token reuse.</p>
+<pre><code><span class="c">// google.js</span>
+<span class="k">export async function</span> requestToken({ prompt = <span class="s">''</span>, hint, scope } = {}) {
+  <span class="k">const</span> oauth2 = <span class="k">await</span> waitForGis()            <span class="c">// the GIS script from index.html</span>
+  <span class="k">return new</span> Promise((resolve, reject) =&gt; {
+    oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: scope || scopes(), hint, prompt,
+      callback: (resp) =&gt; { token = resp.access_token; expiresAt = now + resp.expires_in*1000
+                            saveToken(); resolve(token) },
+      error_callback: (err) =&gt; reject(new Error(err?.type)),
+    }).requestAccessToken()                      <span class="c">// opens Google's window</span>
+  })
+}</code></pre>
+<ul>
+  <li><code>login()</code> uses <code>prompt: 'select_account'</code> (shows the account chooser) → <code>fetchProfile()</code> → <code>startSession({ ...profile, mode:'google' })</code>.</li>
+  <li>The session (<code>pz:session</code>) has <b>no expiry</b>. It lasts until the user logs out, which satisfies "keep me signed in".</li>
+  <li><code>loginLocal()</code> creates <code>{ sub:'local', mode:'local' }</code> and skips Google entirely.</li>
+</ul>
+
+<h2>8.4 Tokens: caching and renewal</h2>
+<p>Because there is no refresh token, every hour the app must ask Google again. That request opens a (usually auto-closing) window. Two rules keep this unobtrusive:</p>
+<div class="step"><div class="n">1</div><div><h3>Cache the token</h3><p>The token and its expiry are stored in <code>localStorage['pz:tok']</code>. At module load, a token valid for more than one more minute is restored.
+Reloading, refreshing or reopening the installed app within the hour therefore reuses it: <b>no window</b>. The cache is cleared on logout and on a 401.</p></div></div>
+<div class="step"><div class="n">2</div><div><h3>Background work never opens the window</h3><p><code>hasLiveToken()</code> is checked before any timer, focus or "back online" sync. Only
+<b>launch</b>, a <b>user action</b> (saving an edit, tapping Reconnect, opening a group) or an explicit button may request a new token.</p></div></div>
+<div class="why"><b>What users saw before:</b> the token lived only in memory, so every page load opened Google's sign-in window. A test counting <code>requestAccessToken()</code> calls now
+shows: first launch 1, three reloads 0, expired token 1, focus/online with an expired token 0, saving an edit 1.</div>
+<div class="warn">A token in <code>localStorage</code> is readable by any script on the same origin, so an XSS bug could steal it for up to an hour. The scopes are narrow (app data and files the app created)
+and the app contains no third-party scripts besides Google's, which is the usual accepted trade-off for a browser-only OAuth app.</div>
+
+<h2>8.5 Calling Drive: the <code>api()</code> helper</h2>
+<pre><code><span class="k">async function</span> api(url, opts, hint) {
+  <span class="k">const</span> t = <span class="k">await</span> ensureToken(hint)                   <span class="c">// cached → else renew</span>
+  <span class="k">let</span> res = <span class="k">await</span> fetch(url, { ...opts, headers: { Authorization: `Bearer ${t}` } })
+  <span class="k">if</span> (res.status === 401) { forgetToken(); <span class="c">/* renew once, retry */</span> }
+  <span class="k">if</span> (!res.ok) <span class="k">throw</span> Object.assign(<span class="k">new</span> Error(`Google API ${res.status}`), { status: res.status })
+  <span class="k">return</span> res
+}</code></pre>
+
+<h2>8.6 The PIN lock</h2>
+<table>
+  <thead><tr><th style="width:26%">Piece</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Storage</td><td><code>data.pin = { salt, hash, recovery? }</code>; the PIN itself is never stored.</td></tr>
+    <tr><td>Hashing</td><td><code>hashPin</code>: PBKDF2-SHA-256, 150 000 iterations, 16-byte random salt, 256-bit output (Web Crypto). <code>verifyPin</code> recomputes and compares.</td></tr>
+    <tr><td>When it locks</td><td>On launch if a PIN exists, and when the tab has been hidden for 60 seconds or more.</td></tr>
+    <tr><td>Brute force</td><td>Five wrong attempts → 30-second wait (<code>PinLock.jsx</code>). A 4-digit PIN is a casual-privacy lock, not strong security, and the UI does not claim otherwise.</td></tr>
+    <tr><td>Forgot PIN (Google)</td><td><code>reverifyAccount(sub)</code>: sign in again with <code>select_account</code> and require the <b>same</b> <code>sub</code>; then choose a new PIN. No email and no extra permission.</td></tr>
+    <tr><td>Forgot PIN (local)</td><td>A one-time <b>recovery code</b> (12 characters from a 32-letter alphabet without 0/O/1/I, shown as <code>XXXX-XXXX-XXXX</code>) is created when the PIN is set. Only its salted PBKDF2 hash is stored. Entering it allows a new PIN. If both are lost, the only way in is "erase data".</td></tr>
+  </tbody>
+</table>
+<div class="why"><b>History:</b> the first design emailed a 6-digit code through the Gmail API. That needs the sensitive <code>gmail.send</code> scope, which forces Google's verification process.
+Re-verifying with Google proves identity just as well and needs no extra scope, so the email flow was removed.</div>
+
+<h2>8.7 Encrypted backups</h2>
+<ul>
+  <li>Plain backup: JSON of the document <b>without the PIN</b> (<code>buildBackup</code>).</li>
+  <li>Protected backup: <code>{ app, encrypted:true, v:1, salt, iv, data }</code> — AES-GCM, 256-bit key derived from the password with PBKDF2-SHA-256 (200 000 iterations), random 16-byte salt and 12-byte IV.
+      A wrong password fails authentication (<code>bad_password</code>); a missing one raises <code>password_required</code>.</li>
+  <li><code>saveBackupFile</code> shares through the phone's share sheet when it accepts files, otherwise downloads. The file is typed <code>text/plain</code> because far more share targets accept it than <code>application/json</code>.</li>
+</ul>
+
+<h2>8.8 Public identifiers in the bundle</h2>
+<p><code>VITE_GOOGLE_CLIENT_ID</code> and <code>VITE_GOOGLE_API_KEY</code> are compiled into the JavaScript. That is normal for a browser app and safe <i>if configured correctly</i>:
+the client id only works from the authorised origins, and the API key should be restricted to your website and the Drive API in Google Cloud. <b>No secret exists in this project.</b></p>
+
+<h2>8.9 Threat model in one table</h2>
+<table>
+  <thead><tr><th style="width:30%">Risk</th><th>Mitigation / honest limit</th></tr></thead>
+  <tbody>
+    <tr><td>Someone picks up an unlocked phone</td><td>Optional PIN, auto-lock after 60 s hidden.</td></tr>
+    <tr><td>Lost phone, no account mode</td><td>Data is gone unless backed up; the app nudges backups and offers encrypted files.</td></tr>
+    <tr><td>Someone gets a group link</td><td>They can <i>view</i> that group (by design). The admin can delete the group file to revoke.</td></tr>
+    <tr><td>XSS on our origin</td><td>No third-party scripts, no <code>dangerouslySetInnerHTML</code>, React escapes output. Residual: cached token (≤ 1 h).</td></tr>
+    <tr><td>Server breach</td><td>There is no server holding data.</td></tr>
+  </tbody>
+</table>

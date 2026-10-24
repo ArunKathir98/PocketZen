@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
-import { ArrowLeft, Mail } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useApp } from '../lib/store'
-import { hashPin, randomCode, verifyPin } from '../lib/pin'
-import { sendEmailToSelf } from '../lib/google'
+import { hashPin, verifyPin } from '../lib/pin'
+import { reverifyAccount } from '../lib/google'
 import PinPad from '../components/PinPad'
-import { Logo } from '../components/ui'
+import { GoogleG, Logo } from '../components/ui'
 
 export default function PinLock() {
   const { data, session, unlock, logout } = useApp()
@@ -53,39 +53,24 @@ export default function PinLock() {
 
 function ForgotPin({ onBack }) {
   const { session, setPin, unlock } = useApp()
-  const [step, setStep] = useState('send') // send | verify | new | confirm
+  const [step, setStep] = useState('verify') // verify | new | confirm
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [code, setCode] = useState('')
-  const sent = useRef(null) // { code, exp }
   const first = useRef('')
   const [padKey, setPadKey] = useState(0)
 
-  const send = async () => {
+  const verify = async () => {
     setErr('')
     setBusy(true)
     try {
-      const c = randomCode()
-      await sendEmailToSelf(
-        session.email,
-        'Your PocketZen PIN reset code',
-        `Your PocketZen PIN reset code is ${c}.\n\nIt expires in 10 minutes. If you didn't request this, you can ignore this email.\n\n— PocketZen · Your Money. Your Control.`,
-      )
-      sent.current = { code: c, exp: Date.now() + 10 * 60 * 1000 }
-      setStep('verify')
+      const ok = await reverifyAccount(session.sub, session.email)
+      if (ok) setStep('new')
+      else setErr(`Please sign in with ${session.email}.`)
     } catch (e) {
-      setErr(`Couldn't send the email (${e.message}). Make sure you allow PocketZen to send email to yourself.`)
+      setErr(/popup_closed|access_denied/.test(e.message) ? 'Sign-in was cancelled.' : `Couldn't verify (${e.message}).`)
     } finally {
       setBusy(false)
     }
-  }
-
-  const verify = (e) => {
-    e.preventDefault()
-    if (!sent.current || Date.now() > sent.current.exp) return setErr('That code expired. Request a new one.')
-    if (code.trim() !== sent.current.code) return setErr('Incorrect code.')
-    setErr('')
-    setStep('new')
   }
 
   const onPin = async (pin) => {
@@ -111,22 +96,13 @@ function ForgotPin({ onBack }) {
       <div className="auth-card">
         <Logo className="logo-lg" />
         <h1 style={{ fontSize: 30 }}>Reset PIN</h1>
-        {step === 'send' && (
+        {step === 'verify' && (
           <>
-            <p className="desc">We'll email a 6-digit code to <b>{session?.email}</b>.</p>
-            <button className="btn primary block" onClick={send} disabled={busy}>
-              <Mail size={18} /> {busy ? 'Sending…' : 'Send code'}
+            <p className="desc">Confirm it's you by signing in again with <b>{session?.email}</b>.</p>
+            <button className="g-btn" onClick={verify} disabled={busy}>
+              <GoogleG /> {busy ? 'Verifying…' : 'Verify with Google'}
             </button>
           </>
-        )}
-        {step === 'verify' && (
-          <form onSubmit={verify} className="stack" style={{ marginTop: 18 }}>
-            <p className="muted">Enter the code sent to {session?.email}</p>
-            <input className="input num" inputMode="numeric" autoFocus maxLength={6} placeholder="000000" value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} style={{ textAlign: 'center', fontSize: 26, letterSpacing: 8, fontWeight: 800 }} />
-            <button className="btn primary block" disabled={code.length !== 6}>Verify</button>
-            <button type="button" className="btn ghost sm" onClick={() => setStep('send')}>Resend code</button>
-          </form>
         )}
         {(step === 'new' || step === 'confirm') && (
           <>

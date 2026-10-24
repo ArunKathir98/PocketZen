@@ -1,9 +1,8 @@
-// Google Identity Services (token model) + Drive appDataFolder + Gmail send.
+// Google Identity Services (token model) + Drive appDataFolder.
 // Data lives in the user's own hidden Drive "app data" folder, visible only to this app.
 
 export const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const BASE_SCOPES = 'openid email profile https://www.googleapis.com/auth/drive.appdata'
-const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.send'
 const FILE_NAME = 'pocketzen-data.json'
 
 let token = null
@@ -148,32 +147,10 @@ export async function driveSave(sub, data, hint) {
   localStorage.setItem(fileIdKey(sub), created.id)
 }
 
-// ---------- Gmail (forgot PIN) ----------
-const toB64Url = (str) => {
-  const bytes = new TextEncoder().encode(str)
-  let bin = ''
-  bytes.forEach((b) => (bin += String.fromCharCode(b)))
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-const encodeHeader = (s) => `=?UTF-8?B?${btoa(unescape(encodeURIComponent(s)))}?=`
-
-/** Must be called from a user gesture (it may open Google's consent popup the first time). */
-export async function sendEmailToSelf(email, subject, text) {
-  await requestToken({ prompt: '', hint: email, scope: `${BASE_SCOPES} ${GMAIL_SCOPE}` })
-  const raw = toB64Url(
-    [
-      `To: ${email}`,
-      `Subject: ${encodeHeader(subject)}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset="UTF-8"',
-      'Content-Transfer-Encoding: 8bit',
-      '',
-      text,
-    ].join('\r\n'),
-  )
-  await api(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raw }) },
-    email,
-  )
+// ---------- Re-verify identity (forgot PIN) ----------
+/** Must be called from a user gesture. Resolves true only if the same Google account signs in again. */
+export async function reverifyAccount(expectedSub, hint) {
+  await requestToken({ prompt: 'select_account', hint })
+  const p = await fetchProfile(hint)
+  return p.sub === expectedSub
 }

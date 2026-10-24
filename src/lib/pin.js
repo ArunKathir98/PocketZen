@@ -22,4 +22,3 @@ export async function verifyPin(pin, record) {
   return (await derive(pin, unb64(record.salt))) === record.hash
 }
 
-export const randomCode = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0')

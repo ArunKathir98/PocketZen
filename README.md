@@ -6,9 +6,10 @@ own Google Drive **app data folder** (hidden, only PocketZen can read it). No ba
 ## 1. Google Cloud setup (one time)
 
 1. Create a project at https://console.cloud.google.com
-2. **APIs & Services → Library**: enable **Google Drive API** and **Gmail API** (Gmail is only used to email the "forgot PIN" code to the user themselves).
+2. **APIs & Services → Library**: enable **Google Drive API**.
 3. **OAuth consent screen**: External, add app name *PocketZen*, add your Google account(s) as **Test users**.
-   Scopes used: `drive.appdata`, `gmail.send`, `openid`, `email`, `profile`.
+   Scopes used: `drive.appdata`, `openid`, `email`, `profile` (all non-sensitive, so no Google verification is needed).
+   When ready, click **Publish app** to move from Testing to Production (no user cap, no 7-day re-consent).
 4. **Credentials → Create credentials → OAuth client ID → Web application**.
    Authorized JavaScript origins: `http://localhost:5173` and your production URL (e.g. `https://pocketzen.vercel.app`).
 5. Copy the client ID into `.env` (see `.env.example`):
@@ -37,6 +38,6 @@ Then open it on your phone and use **Add to Home Screen / Install app**.
   need a backend.)
 - **Reminders** fire while the app is open or running in the background as an installed PWA. Guaranteed delivery
   when fully closed would need a push server.
-- Gmail's `gmail.send` scope is "sensitive": fine for test users; publicly releasing the app needs Google verification.
+- **Forgot PIN** asks the user to sign in with the same Google account again, then set a new PIN.
 - Export/Import: JSON file (PIN is never exported). Import can replace or merge.
 - Logo → icons: `npm run icons` regenerates the PWA icons from `src/assets/logo-source.jpg`.

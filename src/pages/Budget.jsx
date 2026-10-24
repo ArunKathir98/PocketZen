@@ -55,7 +55,7 @@ export default function Budget() {
             {rows.map(({ b, c, spent, left, pct }) => (
               <div className="card pad" key={b.id}>
                 <div className="row">
-                  <span className="ico" style={{ width: 44, height: 44, borderRadius: 15, display: 'grid', placeItems: 'center', fontSize: 22, background: `${c.color}26` }}>{c.icon}</span>
+                  <span className="ico" style={{ width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 19, background: `${c.color}26` }}>{c.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800 }}>{c.name}</div>
                     <div className="muted num" style={{ fontSize: 12.5 }}>{money(spent)} of {money(b.amount)}</div>
@@ -63,8 +63,8 @@ export default function Budget() {
                   <button className="icon-btn" aria-label={`Edit ${c.name} budget`} onClick={() => setEdit(b)}><Pencil size={16} /></button>
                   <button className="icon-btn danger" aria-label={`Remove ${c.name} budget`} onClick={() => confirm(`Remove budget for ${c.name}?`) && remove('budgets', b.id)}><Trash2 size={16} /></button>
                 </div>
-                <div className={`bar ${pct >= 100 ? 'over' : pct >= 80 ? 'warn' : ''}`} style={{ margin: '14px 0 8px' }}><i style={{ width: `${pct}%` }} /></div>
-                <div className="row between" style={{ fontSize: 13, fontWeight: 700 }}>
+                <div className={`bar ${pct >= 100 ? 'over' : pct >= 80 ? 'warn' : ''}`} style={{ margin: '10px 0 6px' }}><i style={{ width: `${pct}%` }} /></div>
+                <div className="row between" style={{ fontSize: 12, fontWeight: 700 }}>
                   <span className={left < 0 ? 'exp' : ''}>{left < 0 ? `Over by ${money(-left)}` : `${money(left)} left`}</span>
                   <span className="muted">{Math.round(pct)}%</span>
                 </div>

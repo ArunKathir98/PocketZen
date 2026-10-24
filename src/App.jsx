@@ -59,7 +59,7 @@ export default function App() {
             </button>
           ))}
           <div className="grow" />
-          <div className={`sync ${sync}`} style={{ justifyContent: 'center' }} title={SYNC_LABEL[sync]}><i /><span className="s-lbl">{SYNC_LABEL[sync]}</span></div>
+          <div className={`sync st-${sync}`} style={{ justifyContent: 'center' }} title={SYNC_LABEL[sync]}><i /><span className="s-lbl">{SYNC_LABEL[sync]}</span></div>
         </nav>
 
         <main className="content">

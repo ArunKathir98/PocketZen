@@ -40,15 +40,15 @@ export default function Accounts() {
             {rows.map((a) => (
               <div className="card pad" key={a.id} style={{ borderTop: `4px solid ${a.color}` }}>
                 <div className="row">
-                  <span className="ico" style={{ width: 46, height: 46, borderRadius: 15, display: 'grid', placeItems: 'center', fontSize: 23, background: `${a.color}26` }}>{typeOf(a.type).emoji}</span>
+                  <span className="ico" style={{ width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 19, background: `${a.color}26` }}>{typeOf(a.type).emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800 }}>{a.name}</div>
                     <div className="muted" style={{ fontSize: 12.5 }}>{typeOf(a.type).label}{a.note ? ` · ${a.note}` : ''}</div>
                   </div>
-                  <button className="icon-btn" aria-label={`Edit ${a.name}`} onClick={() => setEdit(a)}><Pencil size={16} /></button>
-                  <button className="icon-btn danger" aria-label={`Delete ${a.name}`} onClick={() => del(a)}><Trash2 size={16} /></button>
+                  <button className="icon-btn" aria-label={`Edit ${a.name}`} onClick={() => setEdit(a)}><Pencil size={15} /></button>
+                  <button className="icon-btn danger" aria-label={`Delete ${a.name}`} onClick={() => del(a)}><Trash2 size={15} /></button>
                 </div>
-                <div className="num" style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 14, color: a.current < 0 ? 'var(--expense)' : undefined }}>{money(a.current)}</div>
+                <div className="num" style={{ fontSize: 21, fontWeight: 800, letterSpacing: '-0.03em', marginTop: 10, color: a.current < 0 ? 'var(--expense)' : undefined }}>{money(a.current)}</div>
               </div>
             ))}
           </div>

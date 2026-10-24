@@ -36,7 +36,7 @@ export default function PinLock() {
     <div className="auth">
       <div className="auth-card">
         <Logo className="logo-lg" />
-        <h1 style={{ fontSize: 34 }}>Pocket<span className="grad-text">Zen</span></h1>
+        <h1 style={{ fontSize: 28 }}>Pocket<span className="grad-text">Zen</span></h1>
         <p className="tag">Your Money. Your Control.</p>
         <p className="muted" style={{ marginTop: 18, fontWeight: 600 }}>
           {wait > 0 ? `Too many attempts. Try again in ${wait}s` : 'Enter your PIN to unlock'}

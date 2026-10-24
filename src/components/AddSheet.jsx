@@ -100,7 +100,7 @@ export default function AddSheet({ initial, defaultDate, onClose }) {
 
         <div className="amount-wrap">
           <span className="cur">{currencySymbol()}</span>
-          <input inputMode="decimal" placeholder="0" autoFocus aria-label="Amount" value={amount}
+          <input inputMode="decimal" placeholder="0" autoFocus aria-label="Amount" value={amount} style={{ width: `${Math.max(2, amount.length + 1)}ch` }}
             onChange={(e) => /^\d*\.?\d{0,2}$/.test(e.target.value) && setAmount(e.target.value)} />
         </div>
 

@@ -1,4 +1,5 @@
 import { Bug, Copy, MessageCircle, Share2 } from 'lucide-react'
+import { FEEDBACK_FORM_URL } from '../config'
 
 const message = (url) =>
   [
@@ -16,9 +17,9 @@ const message = (url) =>
     '2️⃣ Anything confusing or broken?',
     '3️⃣ What feature should I add next?',
     '',
-    'Just reply here with screenshots if something looks off. Thank you! 🙏',
+    ...(FEEDBACK_FORM_URL ? [`📝 Feedback form: ${FEEDBACK_FORM_URL}`] : ['Just reply here with screenshots if something looks off.']),
+    'Thank you! 🙏',
   ].join('\n')
-const FEEDBACK_URL = 'https://github.com/ArunKathir98/PocketZen/issues/new'
 
 export default function ShareCard({ onMessage }) {
   const url = window.location.origin + '/'
@@ -62,10 +63,12 @@ export default function ShareCard({ onMessage }) {
         <span className="si"><Copy size={19} /></span>
         <span className="main"><div className="t">Copy message</div><div className="s">{url.replace(/^https?:\/\//, '')}</div></span>
       </button>
-      <a className="setting" href={FEEDBACK_URL} target="_blank" rel="noreferrer">
-        <span className="si"><Bug size={19} /></span>
-        <span className="main"><div className="t">Feedback &amp; bug reports</div><div className="s">Report an issue or ask for a feature</div></span>
-      </a>
+      {FEEDBACK_FORM_URL && (
+        <a className="setting" href={FEEDBACK_FORM_URL} target="_blank" rel="noreferrer">
+          <span className="si"><Bug size={19} /></span>
+          <span className="main"><div className="t">Feedback &amp; bug reports</div><div className="s">Tell us what to fix or add</div></span>
+        </a>
+      )}
     </div>
   )
 }

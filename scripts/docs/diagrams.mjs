@@ -167,7 +167,7 @@ export const diagrams = {
   /* ------------------------------------------------------------------ modes */
   modes: () => {
     let s = ''
-    s += box(10, 10, 300, 110, 'Local-only ("lite") session', { fill: PALETTE.mint, size: 13, weight: 700, sub: 'sub = "local" · data only in IndexedDB · pages: Records, Categories, Accounts, Profile' })
+    s += box(10, 10, 300, 110, 'Local-only ("lite") session', { fill: PALETTE.mint, size: 13, weight: 700, sub: 'sub = "local" · data only in IndexedDB · pages: Records, Analysis, Categories, Accounts, Profile' })
     s += box(390, 10, 300, 110, 'Google session', { fill: PALETTE.sky, size: 13, weight: 700, sub: 'sub = Google id · IndexedDB + Drive app-data · all pages (optional ones switched on in Profile)' })
     s += arrow(312, 50, 388, 50, { label: 'Connect Google Drive', lx: 318, ly: 42 })
     s += arrow(388, 92, 312, 92, { label: 'Stop syncing', lx: 330, ly: 108, dash: true })

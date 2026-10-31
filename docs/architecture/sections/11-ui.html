@@ -14,12 +14,12 @@
 <table>
   <thead><tr><th style="width:24%">Width</th><th>Navigation</th><th>Content</th></tr></thead>
   <tbody>
-    <tr><td>&lt; 820 px (phones)</td><td>Fixed <b>bottom bar</b> (scrolls sideways when more than six tabs); floating add button above it</td><td>Single column, 14 px padding, safe-area insets for notches</td></tr>
+    <tr><td>&lt; 820 px (phones)</td><td>Fixed <b>bottom bar</b> with at most 5 slots: 3 pages, <b>⋯ More</b> (a sheet with the remaining pages; highlighted while one of them is open) and <b>Profile</b>, always visible. Up to 5 pages show with no More. Floating add button above it</td><td>Single column, 14 px padding, safe-area insets for notches</td></tr>
     <tr><td>≥ 820 px (tablet, laptop)</td><td>Left <b>sidebar</b> rail, 76 px, icons + small labels</td><td>Centered page, max 1080 px</td></tr>
     <tr><td>≥ 1280 px (monitor)</td><td>Sidebar widens to 200 px with full labels and the sync status text</td><td>Content narrows to max 980 px so lines stay readable</td></tr>
   </tbody>
 </table>
-<p>The same <code>tabs</code> array renders both navigations, so they can never disagree.</p>
+<p>The same <code>tabs</code> array renders both navigations, so they can never disagree. The bar is computed in <code>App.jsx</code>: <code>crowded = tabs.length &gt; 5</code>; <code>barTabs</code> = first three non-Profile pages, <code>moreTabs</code> = the rest. The desktop sidebar always lists every page.</p>
 
 <h2>11.3 Modals and dialogs</h2>
 <ul>

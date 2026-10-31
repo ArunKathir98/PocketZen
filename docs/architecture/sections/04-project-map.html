@@ -27,6 +27,7 @@ src/
     <tr><td>idb.js</td><td>Service</td><td>Promise key-value store on IndexedDB with a localStorage fallback.</td></tr>
     <tr><td>google.js</td><td>Service</td><td>Token handling (cache, scopes, renewal), profile, Drive app-data load/save, group file create/share/read/write/delete, public read.</td></tr>
     <tr><td>merge.js</td><td>Logic</td><td><code>mergeData(base, inc)</code> — combine two documents without duplicates; <code>hasUserData</code>.</td></tr>
+    <tr><td>analysis.js</td><td>Logic</td><td><code>analyze()</code>: totals, previous-period change, category slices (top 5 + "Other"), bar series, averages, peak and biggest record. Pure functions.</td></tr>
     <tr><td>calc.js</td><td>Logic</td><td>Account balances, period ranges and labels, totals, per-category monthly spend, day grouping.</td></tr>
     <tr><td>emi.js</td><td>Logic</td><td>EMI statistics (paid, pending, remaining, next due) and upcoming schedule.</td></tr>
     <tr><td>loans.js</td><td>Logic</td><td>Loan interest engine (<code>loanStats</code>), interest-first split, person totals, statement text.</td></tr>
@@ -50,6 +51,7 @@ src/
     <tr><td>Login.jsx</td><td>Welcome + "Continue with Google" / "Continue without an account".</td></tr>
     <tr><td>PinLock.jsx</td><td>PIN pad and both "Forgot PIN" flows (Google re-verify, local recovery code).</td></tr>
     <tr><td>Records.jsx</td><td>Totals hero, day/week/month switch, grouped list, add button.</td></tr>
+    <tr><td>Analysis.jsx</td><td>Spending/income analysis: period + type switches, donut by category, tappable bar chart, headline tiles.</td></tr>
     <tr><td>Categories.jsx</td><td>Income/expense tabs, add/edit/delete, opens category detail.</td></tr>
     <tr><td>Accounts.jsx</td><td>Account cards with computed balances.</td></tr>
     <tr><td>Budget.jsx</td><td>Per-category monthly limits with progress.</td></tr>

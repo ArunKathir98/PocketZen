@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
-import { CircleUserRound, Handshake, HandCoins, Users, Landmark, LayoutGrid, ListChecks, PiggyBank, BellRing, X } from 'lucide-react'
+import { BellRing, ChartPie, CircleUserRound, Ellipsis, HandCoins, Handshake, Landmark, LayoutGrid, ListChecks, PiggyBank, Users, X } from 'lucide-react'
 import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { clearPendingJoin, getPendingJoin } from './lib/pendingJoin'
 import { isGroupId, parseGroupRef } from './lib/groupState'
 import PublicGroup from './pages/PublicGroup'
 import { groupSharingEnabled } from './lib/google'
-import { Logo } from './components/ui'
+import { Logo, Modal } from './components/ui'
 import { BackupBanner, InstallBanner, NotifyBanner } from './components/Banners'
 import LocalWelcome from './components/LocalWelcome'
 import Login from './pages/Login'
 import PinLock from './pages/PinLock'
 import Records from './pages/Records'
+import Analysis from './pages/Analysis'
 import Categories from './pages/Categories'
 import Accounts from './pages/Accounts'
 import Budget from './pages/Budget'
@@ -23,6 +24,7 @@ import User from './pages/User'
 
 const TABS = [
   ['records', 'Records', ListChecks, Records],
+  ['analysis', 'Analysis', ChartPie, Analysis, 'showAnalysis'],
   ['categories', 'Categories', LayoutGrid, Categories],
   ['accounts', 'Accounts', Landmark, Accounts],
   ['budget', 'Budget', PiggyBank, Budget],
@@ -34,7 +36,7 @@ const TABS = [
 ]
 
 // Without a Google account the app is a simple tracker: only these pages are available.
-const LITE_TABS = new Set(['records', 'categories', 'accounts', 'user'])
+const LITE_TABS = new Set(['records', 'analysis', 'categories', 'accounts', 'user'])
 
 const SYNC_LABEL = { idle: 'Local', local: 'On this device', syncing: 'Syncing…', synced: 'Synced to Drive', offline: 'Offline', auth: 'Reconnect needed', error: 'Sync error' }
 
@@ -43,6 +45,7 @@ export default function App() {
   const [showPublic, setShowPublic] = useState(true)
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
+  const [moreOpen, setMoreOpen] = useState(false)
   const tabs = TABS.filter((t) => (isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]]))
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
@@ -87,6 +90,16 @@ export default function App() {
   const Page = tabs.find((t) => t[0] === tab)?.[3] || Records
   const activeTab = tabs.some((t) => t[0] === tab) ? tab : 'records'
 
+  // Phone bottom bar: at most 5 slots. With more pages than that, show 3 pages + "More" + Profile (always visible).
+  const MAX_SLOTS = 5
+  const crowded = tabs.length > MAX_SLOTS
+  const profile = tabs.find((t) => t[0] === 'user')
+  const rest = tabs.filter((t) => t[0] !== 'user')
+  const barTabs = crowded ? rest.slice(0, MAX_SLOTS - 2) : rest
+  const moreTabs = crowded ? rest.slice(MAX_SLOTS - 2) : []
+  const moreActive = moreTabs.some((t) => t[0] === activeTab)
+  const go = (k) => { setTab(k); setMoreOpen(false) }
+
   return (
     <>
       <div className="ambient" />
@@ -120,13 +133,36 @@ export default function App() {
         </main>
 
         <nav className="bottom-nav" aria-label="Main">
-          {tabs.map(([k, label, Icon]) => (
-            <button key={k} className={`nav-item ${activeTab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={activeTab === k ? 'page' : undefined}>
+          {barTabs.map(([k, label, Icon]) => (
+            <button key={k} className={`nav-item ${activeTab === k ? 'active' : ''}`} onClick={() => go(k)} aria-current={activeTab === k ? 'page' : undefined}>
               <Icon /> {label}
             </button>
           ))}
+          {crowded && (
+            <button className={`nav-item ${moreActive ? 'active' : ''}`} onClick={() => setMoreOpen(true)} aria-haspopup="dialog" aria-label={`More pages (${moreTabs.length})`}>
+              <Ellipsis /> More
+            </button>
+          )}
+          {profile && (
+            <button className={`nav-item ${activeTab === 'user' ? 'active' : ''}`} onClick={() => go('user')} aria-current={activeTab === 'user' ? 'page' : undefined}>
+              {(() => { const Icon = profile[2]; return <Icon /> })()} {profile[1]}
+            </button>
+          )}
         </nav>
       </div>
+
+      {moreOpen && (
+        <Modal title="More pages" onClose={() => setMoreOpen(false)}>
+          <div className="more-grid">
+            {moreTabs.map(([k, label, Icon]) => (
+              <button key={k} className={`more-item ${activeTab === k ? 'on' : ''}`} onClick={() => go(k)} aria-current={activeTab === k ? 'page' : undefined}>
+                <span className="mi"><Icon size={22} /></span>{label}
+              </button>
+            ))}
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>Turn pages on or off in Profile → Pages.</p>
+        </Modal>
+      )}
 
       {isLocal && <LocalWelcome />}
 

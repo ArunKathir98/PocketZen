@@ -50,6 +50,7 @@ export const defaultSettings = () => ({
   currency: 'INR',
   dailyReminder: false,
   dailyReminderTime: '20:00',
+  showAnalysis: false,
   showEmi: false,
   showReminders: false,
   showLoans: false,

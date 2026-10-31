@@ -41,6 +41,7 @@ sees in every situation.</p>
 <h2>5.3 Which tabs exist</h2>
 <pre><code><span class="k">const</span> TABS = [
   [<span class="s">'records'</span>,    <span class="s">'Records'</span>,    ListChecks,  Records],
+  [<span class="s">'analysis'</span>,   <span class="s">'Analysis'</span>,   ChartPie,    Analysis,  <span class="s">'showAnalysis'</span>],
   [<span class="s">'categories'</span>, <span class="s">'Categories'</span>, LayoutGrid,  Categories],
   [<span class="s">'accounts'</span>,   <span class="s">'Accounts'</span>,   Landmark,    Accounts],
   [<span class="s">'budget'</span>,     <span class="s">'Budget'</span>,     PiggyBank,   Budget],
@@ -50,8 +51,8 @@ sees in every situation.</p>
   [<span class="s">'reminders'</span>,  <span class="s">'Reminders'</span>,  BellRing,    Reminders, <span class="s">'showReminders'</span>],
   [<span class="s">'user'</span>,       <span class="s">'Profile'</span>,    CircleUserRound, User],
 ]
-<span class="c">// lite (local) mode only gets these four:</span>
-<span class="k">const</span> LITE_TABS = <span class="k">new</span> Set([<span class="s">'records'</span>, <span class="s">'categories'</span>, <span class="s">'accounts'</span>, <span class="s">'user'</span>])
+<span class="c">// lite (local) mode only gets these five:</span>
+<span class="k">const</span> LITE_TABS = <span class="k">new</span> Set([<span class="s">'records'</span>, <span class="s">'analysis'</span>, <span class="s">'categories'</span>, <span class="s">'accounts'</span>, <span class="s">'user'</span>])
 <span class="k">const</span> tabs = TABS.filter(t =&gt; isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]])</code></pre>
 <p>The fifth array element is the settings flag that switches an optional page on. If the saved <code>tab</code> is no longer allowed (for example after
 disabling a page) the app falls back to Records.</p>

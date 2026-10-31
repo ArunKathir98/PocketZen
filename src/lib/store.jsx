@@ -110,7 +110,7 @@ export function AppProvider({ children }) {
         const m = mergeData(r, local)
         const merged = {
           ...m,
-          settings: { ...r.settings, ...local.settings, showEmi: m.settings.showEmi, showReminders: m.settings.showReminders, showLoans: m.settings.showLoans, showGroups: m.settings.showGroups },
+          settings: { ...r.settings, ...local.settings, showAnalysis: m.settings.showAnalysis, showEmi: m.settings.showEmi, showReminders: m.settings.showReminders, showLoans: m.settings.showLoans, showGroups: m.settings.showGroups },
           pin: local.pin || r.pin,
           updatedAt: Date.now(),
         }

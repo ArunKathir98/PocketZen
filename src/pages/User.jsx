@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { BellRing, CalendarClock, DatabaseBackup, HandCoins, Handshake, Users, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
+import { BellRing, CalendarClock, ChartPie, DatabaseBackup, HandCoins, Handshake, Users, KeyRound, LogOut, Moon, RefreshCw, RotateCcw, Smartphone, Sun, SunMoon, Trash2, Upload, Wallet } from 'lucide-react'
 import { useApp } from '../lib/store'
 import { CURRENCIES } from '../lib/defaults'
 import { hashPin, hashRecovery, makeRecoveryCode, verifyPin } from '../lib/pin'
@@ -159,6 +159,11 @@ export default function User() {
 
         <div className="section-title">Pages</div>
         <div className="card list">
+          <div className="setting">
+            <span className="si"><ChartPie size={19} /></span>
+            <span className="main"><div className="t">Analysis</div><div className="s">Charts of where your money goes</div></span>
+            <Toggle on={!!s.showAnalysis} onChange={(v) => setSettings({ showAnalysis: v })} label="Analysis page" />
+          </div>
           <div className="setting">
             <span className="si"><HandCoins size={19} /></span>
             <span className="main"><div className="t">EMI tracker</div><div className="s">Track loans, pending months and payments</div></span>

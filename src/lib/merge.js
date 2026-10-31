@@ -87,6 +87,7 @@ export function mergeData(base, inc) {
     reminders,
     settings: {
       ...base.settings,
+      showAnalysis: !!(base.settings?.showAnalysis || inc.settings?.showAnalysis),
       showEmi: !!(base.settings?.showEmi || inc.settings?.showEmi),
       showReminders: !!(base.settings?.showReminders || inc.settings?.showReminders),
       showLoans: !!(base.settings?.showLoans || inc.settings?.showLoans),

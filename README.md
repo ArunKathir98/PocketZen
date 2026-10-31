@@ -10,6 +10,7 @@ Live app: https://pocketzen.arunkumar98kak.workers.dev/ · Version 1.0
 | Page | |
 |---|---|
 | **Records** | Income, expenses and transfers; daily / weekly / monthly views; per-category history |
+| **Analysis** | Charts of where money goes: category donut, day/month bars, vs last period, averages. Optional page for Google users (Profile → Pages); always on without an account |
 | **Categories** | Add, edit, remove; tap one to see all its transactions |
 | **Accounts** | Banks, wallets, cash, investments, with live balances |
 | **Budget** | Monthly limit per expense category; remaining balance shown while adding an expense |
@@ -19,13 +20,15 @@ Live app: https://pocketzen.arunkumar98kak.workers.dev/ · Version 1.0
 | **Reminders** | Recurring bill reminders, plus an optional daily "add today's expenses" nudge |
 | **Profile** | Light / dark theme, currency, PIN lock, notifications (sound & vibration), backup & restore, share |
 
+On phones the bottom bar has five slots: three pages, **⋯ More** (the rest) and **Profile**, which is always visible. Tablets and desktops show every page in the sidebar.
+
 Also: PIN lock, password-protected backups, install prompt, offline use, in-app dialogs (no browser pop-ups).
 
 ### Two ways to use it
 
 | | Sign in with Google | Without an account |
 |---|---|---|
-| Pages | Everything above (EMIs, Loans, Reminders and Groups are switched on in Profile → Pages) | Records, Categories, Accounts, Profile |
+| Pages | Everything above (Analysis, EMIs, Loans, Reminders and Groups are switched on in Profile → Pages) | Records, Analysis, Categories, Accounts, Profile |
 | Data | Your Drive app-data folder, synced across devices | On this device only (IndexedDB) |
 | Backup | Automatic (Drive) | Backup file (optionally password-protected); a reminder after 14 days |
 | Forgot PIN | Sign in with Google again | One-time recovery code |

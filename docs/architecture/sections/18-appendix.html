@@ -12,6 +12,7 @@
     <tr><td><code>pz:fileId:&lt;sub&gt;</code></td><td>localStorage</td><td>Cached id of <code>pocketzen-data.json</code>.</td></tr>
     <tr><td><code>pz:theme</code></td><td>localStorage</td><td><code>light | dark | system</code>.</td></tr>
     <tr><td><code>pz:tab</code></td><td>localStorage</td><td>Last selected tab.</td></tr>
+    <tr><td><code>pz:open</code></td><td>localStorage</td><td>Page a notification tap asked to open (<code>add</code>, <code>reminders</code>…), until the app acts on it.</td></tr>
     <tr><td><code>pz:pendingJoin</code></td><td>localStorage</td><td>Group id from a <code>?view=</code> link, until handled.</td></tr>
     <tr><td><code>pz:installDismissed</code></td><td>localStorage</td><td>Time the install banner was dismissed (7-day snooze).</td></tr>
     <tr><td><code>pz:backupSnooze</code></td><td>localStorage</td><td>Backup reminder snoozed until this time (3 days).</td></tr>
@@ -54,7 +55,8 @@
     <tr><td><code>PinPad.jsx</code></td><td><code>keydown</code></td><td>Digits and Backspace.</td></tr>
     <tr><td><code>main.jsx</code></td><td><code>pointerdown</code>/<code>keydown</code> once</td><td>Unlock Web Audio.</td></tr>
     <tr><td><code>install.js</code></td><td><code>beforeinstallprompt</code>, <code>appinstalled</code></td><td>Remember / forget the install prompt.</td></tr>
-    <tr><td><code>sw-notify.js</code></td><td><code>notificationclick</code>, <code>push</code></td><td>Focus/open the app; show pushed notification.</td></tr>
+    <tr><td><code>sw-notify.js</code></td><td><code>notificationclick</code>, <code>push</code></td><td>Focus the app (or open <code>/?open=…</code>) and post <code>pz-open</code>; show a pushed notification.</td></tr>
+    <tr><td><code>openTarget.js</code></td><td>service-worker <code>message</code></td><td>Remember the requested page for <code>App.jsx</code>.</td></tr>
     <tr><td><code>PinLock.jsx</code></td><td>5 wrong PINs</td><td>30-second countdown.</td></tr>
   </tbody>
 </table>

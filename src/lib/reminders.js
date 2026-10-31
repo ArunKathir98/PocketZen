@@ -1,4 +1,4 @@
-import { addDays, toDateStr } from './util'
+import { addDays, fmtTime, money, toDateStr } from './util'
 import { fireReminder, notificationsSupported } from './notify'
 import { hasMonthlyCycle, loanLabel, loanStats } from './loans'
 
@@ -70,9 +70,11 @@ export function checkDue(data, now = new Date()) {
     const key = `r:${r.id}:${r.doneCount || 0}`
     if (fired[key]) continue
     markFired(key)
-    const body = r.amount ? `Due now · ${r.title}` : r.title
-    fireReminder({ title: `Bill reminder: ${r.title}`, body, tag: key }, data.settings)
-    messages.push({ id: key, title: r.title, body: 'Bill is due' })
+    const title = `⏰ ${r.title}`
+    const at = fmtTime(r.dueAt.slice(11, 16))
+    const body = `${r.amount ? `${money(r.amount)} · ` : ''}due${at ? ` at ${at}` : ' now'}. Tap to open your reminders.`
+    fireReminder({ title, body, tag: key, open: 'reminders' }, data.settings)
+    messages.push({ id: key, title, body, open: 'reminders' })
   }
   if (data.settings.showLoans) {
     const today = toDateStr(now)
@@ -91,10 +93,10 @@ export function checkDue(data, now = new Date()) {
         const key = `loan:${l.id}:${ym}`
         if (now >= at && !fired[key]) {
           markFired(key)
-          const body = st.interestDue > 0 ? `Interest due ${fmt(st.interestDue)}` : 'Interest day'
-          const title = l.direction === 'lent' ? `Collect interest from ${who}` : `Pay interest to ${who}`
-          fireReminder({ title, body, tag: key }, data.settings)
-          messages.push({ id: key, title, body })
+          const body = `${st.interestDue > 0 ? `Interest due ${fmt(st.interestDue)}` : 'Interest day'}. Tap to open your loans.`
+          const title = l.direction === 'lent' ? `💰 Collect interest from ${who}` : `💸 Pay interest to ${who}`
+          fireReminder({ title, body, tag: key, open: 'loans' }, data.settings)
+          messages.push({ id: key, title, body, open: 'loans' })
         }
       }
       // final repayment date
@@ -102,10 +104,10 @@ export function checkDue(data, now = new Date()) {
         const key = `loandue:${l.id}`
         if (!fired[key]) {
           markFired(key)
-          const title = l.direction === 'lent' ? `${who} should repay today` : `Repay ${who} today`
-          const body = `${loanLabel(l)} · outstanding ${fmt(st.outstanding)}`
-          fireReminder({ title, body, tag: key }, data.settings)
-          messages.push({ id: key, title, body })
+          const title = l.direction === 'lent' ? `💰 ${who} should repay today` : `💸 Repay ${who} today`
+          const body = `${loanLabel(l)} · outstanding ${fmt(st.outstanding)}. Tap to open your loans.`
+          fireReminder({ title, body, tag: key, open: 'loans' }, data.settings)
+          messages.push({ id: key, title, body, open: 'loans' })
         }
       }
     }
@@ -120,8 +122,9 @@ export function checkDue(data, now = new Date()) {
       const todayStr = toDateStr(now)
       const hasToday = data.transactions.some((t) => t.date === todayStr)
       if (!hasToday) {
-        fireReminder({ title: 'PocketZen', body: "Don't forget to add today's expenses.", tag: key }, data.settings)
-        messages.push({ id: key, title: 'Daily reminder', body: "Don't forget to add today's expenses." })
+        const body = "You haven't added anything today. Tap to add an expense."
+        fireReminder({ title: "📝 Add today's expenses", body, tag: key, open: 'add' }, data.settings)
+        messages.push({ id: key, title: "Add today's expenses", body, open: 'add' })
       }
     }
   }

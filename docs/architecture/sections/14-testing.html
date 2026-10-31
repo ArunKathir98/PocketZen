@@ -21,7 +21,7 @@
   <thead><tr><th style="width:28%">Scenario</th><th>Checks</th></tr></thead>
   <tbody>
     <tr><td>Core money flows</td><td>Optional pages hidden by default, enable in Profile, EMI add/pay/undo with linked expense, category detail, app dialogs, no native browser dialogs ever fired.</td></tr>
-    <tr><td>Notifications</td><td>Background reminder produces a real system notification (silent/vibrate options); foreground uses a toast; install banner flow.</td></tr>
+    <tr><td>Notifications</td><td>Background reminder produces a real system notification (badge, readable text, tap target); foreground uses a tappable toast; install banner flow; <code>?open=</code> and service-worker messages open the right screen, even behind the PIN screen. The service worker's tap handler is run in a stub worker scope, including the case where focusing a window is refused.</td></tr>
     <tr><td>Local mode</td><td>Reload persistence in IndexedDB, lite navigation, PIN → recovery code → forgot-PIN, encrypted backup + restore, connect to Google (empty Drive and merge), disconnect, erase.</td></tr>
     <tr><td>Loans</td><td>Create, interest figures match the engine to the paisa, payments split, recorded-in-account with undo, statement share text, settled tab, persistence.</td></tr>
     <tr><td>Groups (Drive-hosted)</td><td>Admin permission request (<code>drive.file</code> only for groups), file private until Invite, public read-only page with no sign-in, no add/edit controls for viewers, PDF download, second admin device, offline outbox, delete, bad links, sharing off without a key.</td></tr>

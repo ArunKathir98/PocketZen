@@ -4,6 +4,8 @@ import { useApp } from './lib/store'
 import { checkDue } from './lib/reminders'
 import { clearPendingJoin, getPendingJoin } from './lib/pendingJoin'
 import { isGroupId, parseGroupRef } from './lib/groupState'
+import { onOpenTarget, setOpenTarget, takeOpenTarget } from './lib/openTarget'
+import AddSheet from './components/AddSheet'
 import PublicGroup from './pages/PublicGroup'
 import { groupSharingEnabled } from './lib/google'
 import { Logo, Modal } from './components/ui'
@@ -46,6 +48,8 @@ export default function App() {
   const [tab, setTab] = useState(() => localStorage.getItem('pz:tab') || 'records')
   const [toasts, setToasts] = useState([])
   const [moreOpen, setMoreOpen] = useState(false)
+  const [quickAdd, setQuickAdd] = useState(false)
+  const [openVer, setOpenVer] = useState(0)
   const tabs = TABS.filter((t) => (isLocal ? LITE_TABS.has(t[0]) : !t[4] || data.settings[t[4]]))
 
   useEffect(() => localStorage.setItem('pz:tab', tab), [tab])
@@ -57,6 +61,18 @@ export default function App() {
     if (!data.settings.showGroups) setSettings({ showGroups: true })
     setTab('groups')
   }, [session, ready, locked, isLocal]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A notification tap / toast / ?open= link: go to the right page (waits for the PIN screen and for data to load).
+  useEffect(() => onOpenTarget(() => setOpenVer((v) => v + 1)), [])
+  useEffect(() => {
+    if (!session || !ready || locked) return
+    const t = takeOpenTarget()
+    if (!t) return
+    if (t === 'add') {
+      setTab('records')
+      setQuickAdd(true)
+    } else if (tabs.some((x) => x[0] === t)) setTab(t)
+  }, [session, ready, locked, openVer]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // In-app scheduler for bill reminders and the daily nudge.
   useEffect(() => {
@@ -164,13 +180,16 @@ export default function App() {
         </Modal>
       )}
 
+      {quickAdd && <AddSheet initial={null} onClose={() => setQuickAdd(false)} />}
+
       {isLocal && <LocalWelcome />}
 
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
-          <div className="toast" key={t.id}>
+          <div className="toast" key={t.id} role={t.open ? 'button' : undefined} style={t.open ? { cursor: 'pointer' } : undefined}
+            onClick={() => { if (t.open) { setOpenTarget(t.open); setToasts((x) => x.filter((y) => y.id !== t.id)) } }}>
             <BellRing size={18} /> <span><b>{t.title}</b> — {t.body}</span>
-            <button aria-label="Dismiss" onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}><X size={16} /></button>
+            <button aria-label="Dismiss" onClick={(e) => { e.stopPropagation(); setToasts((x) => x.filter((y) => y.id !== t.id)) }}><X size={16} /></button>
           </div>
         ))}
       </div>

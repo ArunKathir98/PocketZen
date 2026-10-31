@@ -22,7 +22,7 @@ export default function NotificationsCard({ onMessage }) {
 
   const test = () => {
     onMessage('Test sent — lock your screen or switch apps within 5 seconds.')
-    setTimeout(() => fireReminder({ title: 'PocketZen test', body: 'Notifications are working 🎉', tag: 'pz-test' }, s, { force: true }), 5000)
+    setTimeout(() => fireReminder({ title: '🔔 PocketZen test', body: 'Notifications are working. Tap here to add an expense.', tag: 'pz-test', open: 'add' }, s, { force: true }), 5000)
   }
 
   const permLabel = { granted: 'On', denied: 'Blocked', default: 'Off', unsupported: 'Unavailable' }[perm]
@@ -36,7 +36,7 @@ export default function NotificationsCard({ onMessage }) {
           <div className="s">
             {perm === 'unsupported' ? (ios ? 'On iPhone, add PocketZen to your Home Screen first, then open it from there.' : 'This browser does not support notifications.')
               : perm === 'denied' ? 'Blocked — enable them in browser / phone settings.'
-              : perm === 'granted' ? 'Reminders can alert you.' : 'Allow so reminders can alert you.'}
+              : perm === 'granted' ? 'Reminders can alert you while PocketZen is open or running in the background. If nothing appears, check your phone: Settings → Apps → Chrome (or PocketZen) → Notifications.' : 'Allow so reminders can alert you.'}
           </div>
         </span>
         {perm === 'default' && <button className="btn sm primary" onClick={enable}>Allow</button>}

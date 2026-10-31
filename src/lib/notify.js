@@ -30,9 +30,10 @@ export function playChime() {
 export const vibrate = () => navigator.vibrate?.([200, 100, 200, 100, 200])
 
 /** System notification via the service worker (shows when the app isn't in the foreground). */
-export async function systemNotify({ title, body, tag }, sound = true) {
+export async function systemNotify({ title, body, tag, open = '' }, sound = true) {
   if (!notificationsSupported() || Notification.permission !== 'granted') return false
-  const opts = { body, tag, icon: '/pwa-192.png', badge: '/favicon.png', renotify: true, requireInteraction: true, data: { url: '/' } }
+  // icon = large picture; badge = Android's small status-bar icon, which must be a single-colour silhouette
+  const opts = { body, tag, icon: '/pwa-192.png', badge: '/notif-badge.png', lang: 'en', timestamp: Date.now(), renotify: true, requireInteraction: true, data: { open } }
   // `silent: true` and `vibrate` can't be combined, and silent also mutes vibration.
   if (sound) opts.vibrate = [200, 100, 200, 100, 200]
   else opts.silent = true

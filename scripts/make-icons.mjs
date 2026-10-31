@@ -34,3 +34,11 @@ await square(512, 0.22, white, 'public/pwa-maskable-512.png')
 await square(180, 0.12, white, 'public/apple-touch-icon.png')
 await square(64, 0.06, { r: 0, g: 0, b: 0, alpha: 0 }, 'public/favicon.png')
 console.log('icons done')
+
+// Android draws a notification's small icon as a single-colour silhouette (only the alpha channel counts).
+{
+  const { data, info } = await sharp('src/assets/logo.png').resize(96, 96, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  for (let i = 0; i < data.length; i += 4) { data[i] = data[i + 1] = data[i + 2] = 255 }
+  await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toFile('public/notif-badge.png')
+  console.log('badge done')
+}

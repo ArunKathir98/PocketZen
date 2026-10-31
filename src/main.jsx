@@ -7,7 +7,9 @@ import App from './App'
 import './styles.css'
 import './lib/install'
 import { capturePendingJoin } from './lib/pendingJoin'
+import { captureOpenTarget } from './lib/openTarget'
 
+captureOpenTarget() // notification taps open /?open=add|reminders|loans…
 capturePendingJoin() // group links look like /?view=<group id>
 import { unlockAudio } from './lib/notify'
 

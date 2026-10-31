@@ -80,7 +80,7 @@ export const diagrams = {
       items.forEach((it, i) => { s += box(24 + i * (bw + gap), y + 30, bw, h - 42, it[0], { fill: '#fff', size: 10.5, sub: it[1], rx: 8 }) })
     }
     row(8, 74, '1 · Browser shell (static files, no server code)', [['index.html', 'theme + Google script'], ['main.jsx', 'boot + providers'], ['Service worker', 'offline + notifications'], ['manifest', 'installable PWA']], PALETTE.grey)
-    row(98, 86, '2 · Pages (what the user sees)', [['Records', 'Categories, Accounts'], ['Budget, EMIs', 'Loans, Reminders'], ['Groups', 'GroupView, PublicGroup'], ['Profile', 'Login, PinLock']], PALETTE.mint)
+    row(98, 86, '2 · Pages (what the user sees)', [['Records, Analysis', 'Categories, Accounts'], ['Budget, EMIs', 'Loans, Reminders'], ['Groups', 'GroupView, PublicGroup'], ['Profile', 'Login, PinLock']], PALETTE.mint)
     row(200, 74, '3 · Shared components', [['Modal stack', 'ui.jsx'], ['Dialogs', 'confirm / choose'], ['Forms', 'AddSheet, Backup…'], ['Banners', 'install, notify, backup']], PALETTE.teal)
     row(290, 74, '4 · State (React Context + hooks)', [['store.jsx', 'AppProvider · useApp'], ['useGroup.js', 'live group + outbox'], ['dialog.jsx', 'DialogProvider'], ['install.js', 'useInstall']], PALETTE.sky)
     row(380, 86, '5 · Domain logic (pure functions, easy to test)', [['calc · emi', 'balances, periods'], ['loans', 'interest engine'], ['groupState', 'ops, splits, settle'], ['merge · backup', 'combine, encrypt'], ['pin · reminders', 'hash, schedule']], PALETTE.sand)
